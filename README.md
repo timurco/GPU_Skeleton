@@ -7,13 +7,14 @@ This repository serves as a template for GPU-based plugins for Adobe After Effec
 To turn this template into your own project:
 1. Clone this repository into the Adobe After Effects SDK folder: `SDK/Examples/Effects/`.
 2. Open the `setup.sh` file and replace the project name:
+
     ```bash
     # Original and new project names
     OLD_PROJECT_NAME="GPU_Skeleton"
     # Please replace with your project name
     NEW_PROJECT_NAME="NewProjectName"
     ```
-3. Run the setup file: `./setup.sh`.
+4. Run the setup file: `./setup.sh`.
 This will replace all instances of the old project name in file names, variables, etc. with the new name. It also removes information about this repository and creates a new one.
 
 ## Features
