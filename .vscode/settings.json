@@ -1,0 +1,9 @@
+{
+  "files.associations": {
+    "*.jsx": "javascriptreact",
+    "iosfwd": "cpp",
+    "complex": "cpp",
+    "bitset": "cpp",
+    "chrono": "cpp"
+  }
+}
