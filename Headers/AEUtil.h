@@ -10,8 +10,23 @@
 #include "AEGP_SuiteHandler.h"
 #include "AE_Effect.h"
 #include "AE_Macros.h"
+#include "AEConfig.h"
 
 using namespace std;
+
+#ifdef AE_OS_WIN
+//  global compilation flag configuring windows sdk headers
+//  preventing inclusion of min and max macros clashing with <limits>
+#define NOMINMAX 1
+//  override byte to prevent clashes with <cstddef>
+#define byte win_byte_override
+#include <Windows.h>
+//  Undefine min max macros so they won't collide with <limits> header content.
+#undef min
+#undef max
+//  Undefine byte macros so it won't collide with <cstddef> header content.
+#undef byte
+#endif
 
 namespace AEUtil {
 

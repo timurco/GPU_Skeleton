@@ -21,11 +21,18 @@ GF_KERNEL_FUNCTION(MainKernel,
     //    W    X    Y    Z
     float2 iResolution = {(float)inWidth, (float)inHeight};
     float2 texCoord = {(float)inXY.x, (float)inXY.y};
-    float2 uv = texCoord / iResolution;
+    float2 uv = make_float2(
+      texCoord.x / iResolution.x,
+      texCoord.y / iResolution.y
+    );
 
-    float2 st = uv;
-    uint2 offset = uint2(st * iResolution);
-    offset = clamp(offset, {0, 0}, {inWidth, inHeight});
+    uint2 offset = make_uint2(
+      uv.x * iResolution.x,
+      uv.y * iResolution.y
+    );
+    
+    offset.x = min(max(offset.x, 0), inWidth);
+    offset.y = min(max(offset.y, 0), inHeight);
     float4 fragColor = ReadFloat4(inSrc, offset.y * inSrcPitch + offset.x, !!in16f);
     fragColor.x += inParameter;
     fragColor.y = clamp(fragColor.y + inTime * 0.02f, 0.0f, 1.0f);

@@ -300,7 +300,9 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP,
     CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
                           sizeof(int), &main_params.mHeight));
     CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(int), &main_params.mParameter));
+                          sizeof(float), &main_params.mParameter));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
+                          sizeof(float), &main_params.mTime));
 
     // Launch the kernel
     size_t threadBlock[2] = {16, 16};
@@ -315,7 +317,7 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP,
   else if (!err && extraP->input->what_gpu == PF_GPU_Framework_CUDA) {
     Main_CUDA((const float *)src_mem, (float *)dst_mem, main_params.mSrcPitch,
               main_params.mDstPitch, main_params.m16f, main_params.mWidth,
-              main_params.mHeight, main_params.mParameter, );
+              main_params.mHeight, main_params.mParameter, main_params.mTime);
 
     if (cudaPeekAtLastError() != cudaSuccess) {
       err = PF_Err_INTERNAL_STRUCT_DAMAGED;

@@ -57,7 +57,6 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   FX_LOG("DEBUG VERSION");
 #endif
   FX_LOG_VAL("STAGE VERSION", STAGE_VERSION);
-  FX_LOG_VAL("AEFX_VERSION", AEFX_VERSION);
   FX_LOG_VAL("FS_VERSION", out_data->my_version);
 
   out_data->out_flags = PF_OutFlag_CUSTOM_UI |  //  ABOUT

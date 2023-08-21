@@ -38,10 +38,6 @@ struct ScopedAutoreleasePool {
 };
 #endif
 
-// brings in M_PI on Windows
-#define _USE_MATH_DEFINES
-#include <math.h>
-
 inline PF_Err CL2Err(cl_int cl_result) {
   if (cl_result == CL_SUCCESS) {
     return PF_Err_NONE;
@@ -53,8 +49,11 @@ inline PF_Err CL2Err(cl_int cl_result) {
 
 #define CL_ERR(FUNC) ERR(CL2Err(FUNC))
 
-extern void Main_CUDA(float const *src, float *dst, unsigned int srcPitch, unsigned int dstPitch,
-                      int is16f, unsigned int width, unsigned int height, float time);
+extern void Main_CUDA(float const* src, float* dst, unsigned int srcPitch,
+  unsigned int dstPitch, int is16f,
+  unsigned int width,
+  unsigned int height,
+  float parameter, float time);
 
 // GPU data initialized at GPU setup and used during render.
 struct OpenCLGPUData {

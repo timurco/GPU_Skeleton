@@ -24,16 +24,21 @@ resource 'PiPL' (16000) {
     Category {
       CONFIG_CATEGORY
     },
-    #ifdef AE_OS_WIN
-    #ifdef AE_PROC_INTELx64
-    CodeWin64X86 {"EffectMain"},
-    #endif
-    #else
-    #ifdef AE_OS_MAC
-    CodeMacIntel64 {"EffectMain"},
-    CodeMacARM64 {"EffectMain"},
-    #endif
-    #endif
+  
+#ifdef AE_OS_WIN
+	#ifdef AE_PROC_INTELx64
+		CodeWin64X86 {"EffectMain"},
+	#else
+		CodeWin32X86 {"EffectMain"},
+	#endif	
+#else
+	#ifdef AE_OS_MAC
+		CodeMachOPowerPC {"EffectMain"},
+		CodeMacIntel32 {"EffectMain"},
+		CodeMacIntel64 {"EffectMain"},
+		CodeMacARM64 {"EffectMain"},
+	#endif
+#endif
     /* [6] */
     AE_PiPL_Version {
       2,
@@ -46,7 +51,7 @@ resource 'PiPL' (16000) {
     },
     /* [8] */
     AE_Effect_Version {
-      AEFX_VERSION
+      (MAJOR_VERSION << 19) + (MINOR_VERSION << 15) + (BUG_VERSION << 11) + BUILD_VERSION
     },
     /* [9] */
     AE_Effect_Info_Flags {

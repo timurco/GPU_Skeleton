@@ -32,7 +32,7 @@ using namespace std;
 #include <string>
 #include <vector>
 
-#include "Config.h"
+#include "../Config.h"
 
 string getVersionString();
 vector<string> splitWith(string s, string delimiter);

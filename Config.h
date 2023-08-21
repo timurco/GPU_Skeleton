@@ -5,14 +5,12 @@
 #ifndef IS_PIPL
 // Include PF_Stage
 #include "AE_Effect.h"
-
 #else
 // For PiPL.r, define manually
 #define PF_Stage_DEVELOP 0
 #define PF_Stage_ALPHA 1
 #define PF_Stage_BETA 2
 #define PF_Stage_RELEASE 3
-
 #endif
 
 /* Versioning information */
@@ -28,12 +26,6 @@
 
 #define BUILD_VERSION 0
 #define BUG_VERSION 0
-/* PiPL.r Version Define */
-#define AEFX_VERSION (  (MAJOR_VERSION << 19) | \
-                        ((MINOR_VERSION & 0xF) << 15) | \
-                        ((BUG_VERSION & 0xF) << 11) | \
-                        (STAGE_VERSION << 9) | \
-                        (BUILD_VERSION & 0x1FF))
 
 /**
  * Change Log
