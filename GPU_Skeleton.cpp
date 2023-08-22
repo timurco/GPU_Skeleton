@@ -10,6 +10,7 @@
 
 #include "GPU_Skeleton.h"
 #include "GPU_Skeleton_GPU.h"
+#include "Win/resource.h"
 
 static PF_Err About(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
                     PF_LayerDef *output) {
@@ -78,8 +79,7 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
 
   // Lock the memory block using host_lock_handle() to work with it and cast it to the type
   // GlobalData*.
-  GlobalData *globalData =
-      reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(globalDataH));
+  GlobalData* globalData = static_cast<GlobalData*>(suites.HandleSuite1()->host_lock_handle(globalDataH));
 
   // Initialize the GlobalData structure.
   *globalData = GlobalData();
@@ -110,8 +110,14 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   globalData->deviceInfo.version = in_data->version;
 
   // Create a unique_ptr of CachedImage object and load the image file "about_image.png" into it.
-  unique_ptr<CachedImage> cachedImage(new CachedImage());
-  ERR(LoadImageFile(in_data, "about_image.png", cachedImage.get()));
+  auto cachedImage = std::make_unique<CachedImage>();
+#ifdef AE_OS_WIN
+  const char* file_name = MAKEINTRESOURCE(IDB_PNG1);
+#else
+  const char* file_name = "about_image.png";
+#endif
+  ERR(LoadImageFile(in_data, file_name, cachedImage.get()));
+
   if (!err) {
     globalData->aboutImage = reinterpret_cast<PF_Handle>(cachedImage.release());
   } else {

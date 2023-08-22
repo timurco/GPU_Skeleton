@@ -351,6 +351,7 @@
     <ClInclude Include="..\Headers\AEUtil.h" />
     <ClInclude Include="..\Headers\Debug.h" />
     <ClInclude Include="..\Headers\MiscUtil.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\Util\AEFX_SuiteHelper.c" />
@@ -388,7 +389,7 @@ python "..\..\..\..\GPUUtils\CreateCString.py" -i "$(ProjectDir)%(Filename).i" -
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).obj</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rem Correct compilation is dependant on nvcc being installed correctly, from the CUDA SDK
-"$(CUDA_SDK_BASE_PATH)\bin\nvcc.exe" -arch=sm_30 -use_fast_math -c -ccbin "$(VCInstallDir)Tools\MSVC\14.16.27023\bin\Hostx64\x64" -D_MBCS -Xcompiler /MD,/EHsc,/W3,/nologo,/Zi -I"$(CUDA_SDK_BASE_PATH)\include" -I./ -I"$(ProjectDir)..\..\..\..\GPUUtils" -I$(BOOST_BASE_PATH) -o "$(IntDir)%(Filename).obj" "$(ProjectDir)..\%(Filename).cu"</Command>
+"$(CUDA_SDK_BASE_PATH)\bin\nvcc.exe" -arch=sm_30 -use_fast_math -c -ccbin "$(VCInstallDir)Tools\MSVC\14.29.30133\bin\Hostx64\x64" -D_MBCS -Xcompiler /MD,/EHsc,/W3,/nologo,/Zi -I"$(CUDA_SDK_BASE_PATH)\include" -I./ -I"$(ProjectDir)..\..\..\..\GPUUtils" -I$(BOOST_BASE_PATH) -o "$(IntDir)%(Filename).obj" "$(ProjectDir)..\%(Filename).cu"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Custom build step: Building %(Filename).cu</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).obj</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
@@ -411,6 +412,10 @@ cl /D "MSWindows" /EP $(IntDir)%(Filename).rrc &gt;               "$(ProjectDir)
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GPU_SkeletonPiPL.rc" />
+    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\Assets\about_image.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

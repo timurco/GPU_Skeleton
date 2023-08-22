@@ -21,6 +21,25 @@ PF_Err LoadImageFile(PF_InData *in_data, const A_char *file_name, CachedImage *c
 
   AEGP_SuiteHandler suites(in_data->pica_basicP);
 
+#ifdef AE_OS_WIN
+  HRSRC hResource = FindResource(nullptr, file_name, RT_RCDATA);
+  if (hResource == nullptr) {
+      FX_LOG("Cannot find resource: " << file_name);
+      return PF_Err_BAD_CALLBACK_PARAM;
+  }
+
+  DWORD imageSize = SizeofResource(nullptr, hResource);
+  const void* pResourceData = LockResource(LoadResource(nullptr, hResource));
+  if (pResourceData == nullptr) {
+      FX_LOG("Cannot lock resource: " << file_name);
+      return PF_Err_BAD_CALLBACK_PARAM;
+  }
+
+  // Use stb_image.h to decode the image data
+  cachedImage->data = stbi_load_from_memory((const stbi_uc*)pResourceData, imageSize,
+      &cachedImage->width, &cachedImage->height,
+      &cachedImage->channels, 3);
+#else
   // Get the resource path
   string resourcePath = AEUtil::getResourcesPath(in_data);
   FX_LOG("Resources: " << resourcePath);
@@ -29,10 +48,11 @@ PF_Err LoadImageFile(PF_InData *in_data, const A_char *file_name, CachedImage *c
 
   // Load the image using stb_image.h
   cachedImage->data = stbi_load(resourcePath.c_str(), &cachedImage->width, &cachedImage->height,
-                                &cachedImage->channels, 3);
+      &cachedImage->channels, 3);
+#endif
 
   if (cachedImage->data == nullptr) {
-    FX_LOG("Cannot load image: " << resourcePath);
+    FX_LOG("Cannot load image: " << file_name);
     return PF_Err_BAD_CALLBACK_PARAM;
   }
 

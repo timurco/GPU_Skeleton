@@ -94,7 +94,7 @@ typedef struct {
 } CachedImage;
 
 struct SceneInfo {
-  SceneInfo() : status("Not loaded") {}
+  SceneInfo() : status("Not loaded"), errorLog("") {}
   string status;
   string errorLog;
 };

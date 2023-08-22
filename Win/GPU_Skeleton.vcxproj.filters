@@ -109,6 +109,9 @@
     <ClInclude Include="..\..\..\..\Util\AEFX_SuiteHelper.h">
       <Filter>Supporting code</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\GPU_Skeleton.cpp" />
@@ -147,5 +150,13 @@
     <ResourceCompile Include="GPU_SkeletonPiPL.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+    <ResourceCompile Include="Resource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\Assets\about_image.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
