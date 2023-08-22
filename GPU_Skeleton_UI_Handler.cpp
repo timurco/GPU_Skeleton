@@ -16,58 +16,75 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-PF_Err LoadImageFile(PF_InData *in_data, const A_char *file_name, CachedImage *cachedImage) {
-  PF_Err err = PF_Err_NONE;
+#ifdef AE_OS_WIN
+#include "Win/resource.h"
+#define ABOUT_IMAGE MAKEINTRESOURCE(IDB_PNG1)
 
+HMODULE GCM() {
+  HMODULE hModule = NULL;
+  GetModuleHandleEx(
+    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+    (LPCTSTR)GCM,
+    &hModule);
+
+  return hModule;
+}
+#else
+#define ABOUT_IMAGE "about_image.png"
+#endif
+
+PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage) {
   AEGP_SuiteHandler suites(in_data->pica_basicP);
 
 #ifdef AE_OS_WIN
-  HRSRC hResource = FindResource(nullptr, file_name, RT_RCDATA);
+  HRSRC hResource = FindResource(GCM(), ABOUT_IMAGE, MAKEINTRESOURCE(PNG));
   if (hResource == nullptr) {
-      FX_LOG("Cannot find resource: " << file_name);
-      return PF_Err_BAD_CALLBACK_PARAM;
+    FX_LOG("Cannot find 'about' resource.");
+    return PF_Err_BAD_CALLBACK_PARAM;
   }
 
-  DWORD imageSize = SizeofResource(nullptr, hResource);
-  const void* pResourceData = LockResource(LoadResource(nullptr, hResource));
+  const DWORD imageSize = SizeofResource(GCM(), hResource);
+  const void* pResourceData = LockResource(LoadResource(GCM(), hResource));
   if (pResourceData == nullptr) {
-      FX_LOG("Cannot lock resource: " << file_name);
-      return PF_Err_BAD_CALLBACK_PARAM;
+    FX_LOG("Cannot lock 'about' resource.");
+    return PF_Err_BAD_CALLBACK_PARAM;
   }
 
   // Use stb_image.h to decode the image data
-  cachedImage->data = stbi_load_from_memory((const stbi_uc*)pResourceData, imageSize,
-      &cachedImage->width, &cachedImage->height,
-      &cachedImage->channels, 3);
+  cachedImage->data = stbi_load_from_memory(  (const stbi_uc*)pResourceData, imageSize,
+                                              &cachedImage->width, &cachedImage->height,
+                                              &cachedImage->channels, 3);
 #else
   // Get the resource path
   string resourcePath = AEUtil::getResourcesPath(in_data);
   FX_LOG("Resources: " << resourcePath);
 
-  resourcePath += file_name;
+  resourcePath += ABOUT_IMAGE;
 
   // Load the image using stb_image.h
   cachedImage->data = stbi_load(resourcePath.c_str(), &cachedImage->width, &cachedImage->height,
-      &cachedImage->channels, 3);
+    &cachedImage->channels, 3);
 #endif
 
   if (cachedImage->data == nullptr) {
-    FX_LOG("Cannot load image: " << file_name);
+    FX_LOG("Cannot load 'about' image.");
     return PF_Err_BAD_CALLBACK_PARAM;
   }
 
-  int numBytes = cachedImage->width * cachedImage->height * cachedImage->channels;
+  int numBytes = 
+    cachedImage->width * cachedImage->height * cachedImage->channels;
+
   cachedImage->drawbotDataH = suites.HandleSuite1()->host_new_handle(numBytes);
-  unsigned char *drawbotDataP = reinterpret_cast<unsigned char *>(
-      suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
-
+  unsigned char* drawbotDataP = 
+    reinterpret_cast<unsigned char*>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
+  
   memcpy(drawbotDataP, cachedImage->data, numBytes);
-
+  
   // Unlock and release memory
   suites.HandleSuite1()->host_unlock_handle(cachedImage->drawbotDataH);
   stbi_image_free(cachedImage->data);
 
-  return err;
+  return PF_Err_NONE;
 }
 
 static std::unique_ptr<DRAWBOT_UTF16Char[]> convertStringToUTF16Char(const std::string &str) {
@@ -181,14 +198,14 @@ PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[]
 
   ERR(drawbotSuites.surface_suiteP->DrawString(
       surface_ref, string_brush_ref, small_font_ref,
-      convertStringToUTF16Char("CPU: " + GET_APPLE_CPU(globalData->deviceInfo.appleCPU)).get(),
+      convertStringToUTF16Char("CPU: " + GET_APPLE_CPU(globalData->deviceInfo->appleCPU)).get(),
       &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
 
   text_origin.y += smallFontSize + 2;
 
   ERR(drawbotSuites.surface_suiteP->DrawString(
       surface_ref, string_brush_ref, small_font_ref,
-      convertStringToUTF16Char("Graphics Card: " + GET_GPU(globalData->deviceInfo.GPU)).get(),
+      convertStringToUTF16Char("Graphics Card: " + GET_GPU(globalData->deviceInfo->GPU)).get(),
       &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
 
   text_origin.y += smallFontSize + 2;
@@ -196,7 +213,7 @@ PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[]
   ERR(drawbotSuites.surface_suiteP->DrawString(
       surface_ref, string_brush_ref, small_font_ref,
       convertStringToUTF16Char("After Effects Version: " +
-                               GET_AE_VERSION(globalData->deviceInfo.version))
+                               GET_AE_VERSION(globalData->deviceInfo->version))
           .get(),
       &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
 
@@ -300,7 +317,7 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
   auto *globalData =
       reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
 
-  bool doRenderErrorLog = !globalData->sceneInfo.errorLog.empty();
+  bool doRenderErrorLog = !globalData->sceneInfo->errorLog.empty();
 
   if (!err) {
     DRAWBOT_ColorRGBA foregroundColor, shadowColor, redColor, yellowColor;
@@ -421,7 +438,7 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
         origin.x += shadowOffset.x;
         origin.y += shadowOffset.y;
 
-        auto status = convertStringToUTF16Char(globalData->sceneInfo.status);
+        auto status = convertStringToUTF16Char(globalData->sceneInfo->status);
         ERR(surface->DrawString(surfaceRef, shadowBrushRef, largeFontRef, status.get(), &origin,
                                 kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
 
@@ -434,7 +451,7 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
         origin.y += padding * 2;
 
         // Print error log for each line
-        for (auto &line : splitWith(globalData->sceneInfo.errorLog, "\n")) {
+        for (auto &line : splitWith(globalData->sceneInfo->errorLog, "\n")) {
           origin.y += fontSize + padding;
 
           auto lineUTF16Char = convertStringToUTF16Char(line);

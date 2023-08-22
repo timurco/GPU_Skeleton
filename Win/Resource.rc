@@ -50,7 +50,7 @@ END
 // PNG
 //
 
-IDB_PNG1                PNG                     "C:\\Users\\admin\\Desktop\\CODE\\AfterEffectsSDK\\Examples\\Effect\\PrayMitive Common\\GPU_Skeleton\\Assets\\about_image.png"
+IDB_PNG1 PNG  "..\\Assets\\about_image.png"
 
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////

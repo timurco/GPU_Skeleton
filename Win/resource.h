@@ -2,7 +2,8 @@
 // Microsoft Visual C++ generated include file.
 // Used by Resource.rc
 //
-#define IDB_PNG1                        101
+#define PNG                             255
+#define IDB_PNG1                        254
 
 // Next default values for new objects
 // 

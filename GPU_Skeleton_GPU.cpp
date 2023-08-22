@@ -134,8 +134,8 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
     // For debugging only. This will contain Metal compile warnings and erorrs.
     NSString *getError = error.localizedDescription;
     if (error) {
-      globalData->sceneInfo.status = "Compiling Error";
-      globalData->sceneInfo.errorLog = "";
+      globalData->sceneInfo->status = "Compiling Error";
+      globalData->sceneInfo->errorLog = "";
 
       string input = getError.UTF8String;
       regex re(R"((\d+:\d+).*(error): (.*)\n(?:\s*)(.*)\n)");
@@ -146,11 +146,11 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
         string type = m[2].str();
         string message = m[3].str();
         string code = m[4].str();
-        globalData->sceneInfo.errorLog +=
+        globalData->sceneInfo->errorLog +=
             type + " [" + number + "] " + message + ": " + code + "\n";
         input = m.suffix().str();
       }
-      cout << globalData->sceneInfo.errorLog << endl;
+      cout << globalData->sceneInfo->errorLog << endl;
     }
 
     PF_Handle metal_handle =
@@ -185,8 +185,8 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
         extraP->output->gpu_data = metal_handle;
         out_dataP->out_flags2 = PF_OutFlag2_SUPPORTS_GPU_RENDER_F32;
 
-        globalData->sceneInfo.status = "Compiled Successfully";
-        FX_LOG(globalData->sceneInfo.status);
+        globalData->sceneInfo->status = "Compiled Successfully";
+        FX_LOG(globalData->sceneInfo->status);
       }
     }
   }

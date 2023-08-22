@@ -10,7 +10,6 @@
 
 #include "GPU_Skeleton.h"
 #include "GPU_Skeleton_GPU.h"
-#include "Win/resource.h"
 
 static PF_Err About(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
                     PF_LayerDef *output) {
@@ -73,50 +72,50 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   // the HandleSuite1 structure, which returns a memory descriptor for the created block, and store
   // it in the variable globalDataH.
   PF_Handle globalDataH = suites.HandleSuite1()->host_new_handle(sizeof(GlobalData));
+  if (!globalDataH) {
+    return PF_Err_INTERNAL_STRUCT_DAMAGED;
+  }
 
   // Store the memory descriptor inside out_data for passing it to other functions.
   out_data->global_data = globalDataH;
 
   // Lock the memory block using host_lock_handle() to work with it and cast it to the type
   // GlobalData*.
-  GlobalData* globalData = static_cast<GlobalData*>(suites.HandleSuite1()->host_lock_handle(globalDataH));
+  GlobalData* globalData = reinterpret_cast<GlobalData*>(suites.HandleSuite1()->host_lock_handle(globalDataH));
+  if (!globalData) {
+    return PF_Err_INTERNAL_STRUCT_DAMAGED;
+  }
 
   // Initialize the GlobalData structure.
-  *globalData = GlobalData();
+  AEFX_CLR_STRUCT(*globalData);
 
   // Create a shared_ptr of SceneInfo object and store it in the sceneInfo field of the GlobalData
   // structure.
-  globalData->sceneInfo = SceneInfo();
-
-  globalData->deviceInfo = DeviceInfo();
+  globalData->sceneInfo = make_shared<SceneInfo>();
+  globalData->deviceInfo = make_shared<DeviceInfo> ();
 
 // Set the Debug Info GPU type based on available frameworks.
 #if HAS_CUDA
-  globalData->deviceInfo.GPU = PF_GPU_Framework_CUDA;
+  globalData->deviceInfo->GPU = PF_GPU_Framework_CUDA;
 #elif HAS_METAL
-  globalData->deviceInfo.GPU = PF_GPU_Framework_METAL;
+  globalData->deviceInfo->GPU = PF_GPU_Framework_METAL;
 #else
-  globalData->deviceInfo.GPU = PF_GPU_Framework_OPENCL;
+  globalData->deviceInfo->GPU = PF_GPU_Framework_OPENCL;
 #endif
 
 #ifdef AE_OS_MAC
 #ifdef AE_PROC_INTELx64
-  globalData->deviceInfo.appleCPU = APPLE_INTEL;
+  globalData->deviceInfo->appleCPU = APPLE_INTEL;
 #else
-  globalData->deviceInfo.appleCPU = APPLE_M1;
+  globalData->deviceInfo->appleCPU = APPLE_M1;
 #endif
 #endif
 
-  globalData->deviceInfo.version = in_data->version;
+  globalData->deviceInfo->version = in_data->version;
 
   // Create a unique_ptr of CachedImage object and load the image file "about_image.png" into it.
   auto cachedImage = std::make_unique<CachedImage>();
-#ifdef AE_OS_WIN
-  const char* file_name = MAKEINTRESOURCE(IDB_PNG1);
-#else
-  const char* file_name = "about_image.png";
-#endif
-  ERR(LoadImageFile(in_data, file_name, cachedImage.get()));
+  ERR(LoadAboutImage(in_data, cachedImage.get()));
 
   if (!err) {
     globalData->aboutImage = reinterpret_cast<PF_Handle>(cachedImage.release());

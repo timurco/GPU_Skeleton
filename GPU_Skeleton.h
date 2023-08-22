@@ -94,7 +94,7 @@ typedef struct {
 } CachedImage;
 
 struct SceneInfo {
-  SceneInfo() : status("Not loaded"), errorLog("") {}
+  SceneInfo() noexcept : status("Not loaded"), errorLog("") {}
   string status;
   string errorLog;
 };
@@ -103,6 +103,10 @@ enum { APPLE_NONE = 0, APPLE_M1, APPLE_INTEL };
 typedef A_long AppleCPU;
 
 struct DeviceInfo {
+  DeviceInfo() noexcept :
+    appleCPU(APPLE_NONE),
+    GPU(0) {}  // Assuming PF_SpecVersion has a default constructor
+
   AppleCPU appleCPU;
   PF_GPU_Framework GPU;
   PF_SpecVersion version;
@@ -114,6 +118,7 @@ struct DeviceInfo {
 //      FX_LOG_VAL("MAX_RESULT", in_result.max_result_rect);
 
 struct DebugInfo {
+  DebugInfo() noexcept {}
   PF_LRect result_rect;
   PF_LRect output_rect;
   PF_LRect request_rect;
@@ -124,17 +129,17 @@ struct DebugInfo {
 };
 
 struct GlobalData {
-  GlobalData() : aboutImage(nullptr) {}
+  GlobalData() noexcept : aboutImage(nullptr) {}
   PF_Handle aboutImage;
-  SceneInfo sceneInfo;
-  DeviceInfo deviceInfo;
+  shared_ptr<SceneInfo> sceneInfo;
+  shared_ptr<DeviceInfo> deviceInfo;
   DebugInfo debugInfo;
 };
 
 PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
                  PF_LayerDef *output, PF_EventExtra *event_extra, PF_Pixel some_color);
 
-PF_Err LoadImageFile(PF_InData *in_data, const A_char *file_name, CachedImage *cachedImage);
+PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage);
 
 PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
                        PF_LayerDef *output, PF_EventExtra *extra);
