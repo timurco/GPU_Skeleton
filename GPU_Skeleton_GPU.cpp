@@ -246,9 +246,6 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP,
   AEGP_SuiteHandler suites(in_dataP->pica_basicP);
   auto *globalData = reinterpret_cast<GlobalData *>(
       suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
-
-  globalData->debugInfo.in_world = *input_worldP;
-  globalData->debugInfo.out_world = *output_worldP;
 #endif
 
   // read the parameters

@@ -35,6 +35,7 @@ HMODULE GCM() {
 
 PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage) {
   AEGP_SuiteHandler suites(in_data->pica_basicP);
+  unsigned char* imageData;
 
 #ifdef AE_OS_WIN
   HRSRC hResource = FindResource(GCM(), ABOUT_IMAGE, MAKEINTRESOURCE(PNG));
@@ -51,9 +52,39 @@ PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage) {
   }
 
   // Use stb_image.h to decode the image data
-  cachedImage->data = stbi_load_from_memory(  (const stbi_uc*)pResourceData, imageSize,
-                                              &cachedImage->width, &cachedImage->height,
-                                              &cachedImage->channels, 3);
+  imageData = stbi_load_from_memory((const stbi_uc*)pResourceData, imageSize,
+    &cachedImage->width, &cachedImage->height,
+    &cachedImage->channels, 4);
+
+  // If the image data loading fails, handle the error.
+  if (imageData == nullptr) {
+    FX_LOG("Cannot load 'about' image.");
+    return PF_Err_BAD_CALLBACK_PARAM;
+  }
+
+  // Convert the image from RGBA to ARGB
+  // since Windows support only 4 channels ARGB (32bits)
+  // info: https://community.adobe.com/t5/after-effects-discussions/image-logo-in-parameter/m-p/5197581
+  cachedImage->pixelLayout = kDRAWBOT_PixelLayout_32BGR;
+  unsigned char* argb_data = (unsigned char*)malloc(cachedImage->width * cachedImage->height * 4); // Allocate memory for ARGB data
+
+  for (int y = 0; y < cachedImage->height; ++y) {
+    for (int x = 0; x < cachedImage->width; ++x) {
+      int rgba_index = (y * cachedImage->width + x) * 4;
+
+      // Conversion from RGBA to BGRA
+      argb_data[rgba_index + 0] = imageData[rgba_index + 2]; // A
+      argb_data[rgba_index + 1] = imageData[rgba_index + 1]; // B
+      argb_data[rgba_index + 2] = imageData[rgba_index + 0]; // G
+      argb_data[rgba_index + 3] = imageData[rgba_index + 2]; // R
+    }
+  }
+
+  // Free the original RGBA data loaded from the image
+  stbi_image_free(imageData);
+
+  // Update the data pointer to point to the new ARGB data
+  imageData = argb_data;
 #else
   // Get the resource path
   string resourcePath = AEUtil::getResourcesPath(in_data);
@@ -62,27 +93,32 @@ PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage) {
   resourcePath += ABOUT_IMAGE;
 
   // Load the image using stb_image.h
-  cachedImage->data = stbi_load(resourcePath.c_str(), &cachedImage->width, &cachedImage->height,
+  imageData = stbi_load(resourcePath.c_str(), &cachedImage->width, &cachedImage->height,
     &cachedImage->channels, 3);
-#endif
 
-  if (cachedImage->data == nullptr) {
-    FX_LOG("Cannot load 'about' image.");
+  if (imageData == nullptr) {
+    FX_LOG("Cannot load 'about' image at: " << resourcePath);
     return PF_Err_BAD_CALLBACK_PARAM;
   }
 
-  int numBytes = 
-    cachedImage->width * cachedImage->height * cachedImage->channels;
+  cachedImage->pixelLayout = kDRAWBOT_PixelLayout_24BGR;
+#endif
 
+  // The following section remains unchanged from your original code
+  const int numBytes = cachedImage->width * cachedImage->height * cachedImage->channels;
   cachedImage->drawbotDataH = suites.HandleSuite1()->host_new_handle(numBytes);
-  unsigned char* drawbotDataP = 
-    reinterpret_cast<unsigned char*>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
+  unsigned char* drawbotDataP = static_cast<unsigned char*>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
   
-  memcpy(drawbotDataP, cachedImage->data, numBytes);
+  memcpy(drawbotDataP, imageData, numBytes);
   
   // Unlock and release memory
   suites.HandleSuite1()->host_unlock_handle(cachedImage->drawbotDataH);
-  stbi_image_free(cachedImage->data);
+
+#ifdef AE_OS_WIN
+  free(imageData); // For Windows, after ARGB conversion we use malloc, so we free it.
+#else
+  stbi_image_free(imageData); // For non-Windows (Mac, in this case) where the image was loaded with stb_image
+#endif
 
   return PF_Err_NONE;
 }
@@ -142,14 +178,15 @@ PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[]
     ERR(drawbotSuites.drawbot_suiteP->GetSurface(drawing_ref, &surface_ref));
   }
 
-  auto *globalData =
-      reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
+  auto *globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
   CachedImage *cachedImage = reinterpret_cast<CachedImage *>(globalData->aboutImage);
+  unsigned char* imageDataP = reinterpret_cast<unsigned char*>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
 
   ERR(drawbotSuites.supplier_suiteP->NewImageFromBuffer(
-      supplier_ref, cachedImage->width, cachedImage->height, 3 * cachedImage->width,
-      kDRAWBOT_PixelLayout_24BGR,
-      suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH), &img_ref));
+      supplier_ref, cachedImage->width, cachedImage->height,
+      cachedImage->channels * cachedImage->width,
+      cachedImage->pixelLayout,
+      imageDataP, &img_ref));
 
   suites.HandleSuite1()->host_unlock_handle(cachedImage->drawbotDataH);
   suites.HandleSuite1()->host_unlock_handle(in_data->global_data);
@@ -234,8 +271,7 @@ PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[]
   }
 
   if (img_ref) {
-    ERR2(
-        drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(img_ref)));
+    ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(img_ref)));
   }
 
   // Release the earlier acquired drawbot suites

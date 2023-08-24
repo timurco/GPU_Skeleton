@@ -35,7 +35,11 @@ GF_KERNEL_FUNCTION(MainKernel,
     offset.y = min(max(offset.y, 0), inHeight);
     float4 fragColor = ReadFloat4(inSrc, offset.y * inSrcPitch + offset.x, !!in16f);
     fragColor.x += inParameter;
-    fragColor.y = clamp(fragColor.y + inTime * 0.02f, 0.0f, 1.0f);
+    //fragColor.y = clamp(fragColor.y + inTime * 0.02f, 0.0f, 1.0f);
+
+    // standard UV GLSL Gradient
+    fragColor.z = uv.x;
+    fragColor.y = uv.y;
 
     WriteFloat4(fragColor, outDst, inXY.y * inDstPitch + inXY.x, !!in16f);
   }

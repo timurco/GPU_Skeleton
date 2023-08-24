@@ -87,10 +87,10 @@ DllExport PF_Err EffectMain(PF_Cmd cmd, PF_InData *in_data, PF_OutData *out_data
 
 typedef struct {
   PF_Handle drawbotDataH;
-  unsigned char *data;
   int channels;
   int width;
   int height;
+  DRAWBOT_PixelLayout pixelLayout;
 } CachedImage;
 
 struct SceneInfo {
