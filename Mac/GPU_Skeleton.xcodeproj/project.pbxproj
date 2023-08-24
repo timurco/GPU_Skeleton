@@ -372,6 +372,7 @@
 				);
 				INFOPLIST_FILE = "GPU_Skeleton.plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MARKETING_VERSION = 1.2.0;
 				OTHER_CODE_SIGN_FLAGS = "";
 				OTHER_LDFLAGS = "$(inherited)";

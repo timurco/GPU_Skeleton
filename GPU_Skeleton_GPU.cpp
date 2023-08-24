@@ -151,6 +151,9 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
         input = m.suffix().str();
       }
       cout << globalData->sceneInfo->errorLog << endl;
+      
+      (*in_dataP->utils->ansi.sprintf)(out_dataP->return_msg, globalData->sceneInfo->errorLog.c_str());
+      out_dataP->out_flags |= PF_OutFlag_DISPLAY_ERROR_MESSAGE;
     }
 
     PF_Handle metal_handle =
@@ -165,10 +168,6 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
                                                encoding:NSUTF8StringEncoding];
 
       main_function = [[library newFunctionWithName:func_name] autorelease];
-
-      if (!main_function) {
-        err = PF_Err_INTERNAL_STRUCT_DAMAGED;
-      }
 
       if (!main_function) {
         err = PF_Err_INTERNAL_STRUCT_DAMAGED;

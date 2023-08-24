@@ -9,28 +9,13 @@
 
 namespace AEUtil {
 
-
-#ifdef AE_OS_WIN
-  std::string get_string_from_wcs(const wchar_t* pcs) {
-    int res = WideCharToMultiByte(CP_ACP, 0, pcs, -1, NULL, 0, NULL, NULL);
-    std::unique_ptr<char> shared_pbuf(new char[res]);
-    char* pbuf = shared_pbuf.get();
-    res = WideCharToMultiByte(CP_ACP, 0, pcs, -1, pbuf, res, NULL, NULL);
-    return std::string(pbuf);
-  }
-#endif
-
 string getResourcesPath(PF_InData *in_data) {
   // initialize and compile the shader objects
   A_UTF16Char pluginFolderPath[AEFX_MAX_PATH];
   PF_GET_PLATFORM_DATA(PF_PlatData_EXE_FILE_PATH_W, &pluginFolderPath);
 
 #ifdef AE_OS_WIN
-  string resourcePath = get_string_from_wcs((wchar_t *)pluginFolderPath);
-  string::size_type pos;
-  // delete the plugin name
-  pos = resourcePath.rfind("\\", resourcePath.length());
-  resourcePath = resourcePath.substr(0, pos) + "\\";
+#error "The resource path is only relevant for macOS"
 #endif
 #ifdef AE_OS_MAC
   NSUInteger length = 0;

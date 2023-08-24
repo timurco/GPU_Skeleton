@@ -33,7 +33,7 @@ HMODULE GCM() {
 #define ABOUT_IMAGE "about_image.png"
 #endif
 
-PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage) {
+PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
   AEGP_SuiteHandler suites(in_data->pica_basicP);
   unsigned char* imageData;
 
@@ -87,7 +87,7 @@ PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage) {
   imageData = argb_data;
 #else
   // Get the resource path
-  string resourcePath = AEUtil::getResourcesPath(in_data);
+  std::string resourcePath = AEUtil::getResourcesPath(in_data);
   FX_LOG("Resources: " << resourcePath);
 
   resourcePath += ABOUT_IMAGE;
@@ -100,7 +100,8 @@ PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage) {
     FX_LOG("Cannot load 'about' image at: " << resourcePath);
     return PF_Err_BAD_CALLBACK_PARAM;
   }
-
+  
+  cachedImage->channels = 3;
   cachedImage->pixelLayout = kDRAWBOT_PixelLayout_24BGR;
 #endif
 

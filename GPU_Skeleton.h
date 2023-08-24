@@ -139,7 +139,7 @@ struct GlobalData {
 PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
                  PF_LayerDef *output, PF_EventExtra *event_extra, PF_Pixel some_color);
 
-PF_Err LoadAboutImage(const PF_InData* in_data, CachedImage* cachedImage);
+PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage);
 
 PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
                        PF_LayerDef *output, PF_EventExtra *extra);

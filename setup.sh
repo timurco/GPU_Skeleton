@@ -2,6 +2,7 @@
 
 # Original and new project names
 OLD_PROJECT_NAME="GPU_Skeleton"
+# --> Please REPLACE with your project name <---
 NEW_PROJECT_NAME="NewProjectName"
 
 # Function for finding and replacing strings
