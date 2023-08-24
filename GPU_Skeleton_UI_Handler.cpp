@@ -73,10 +73,10 @@ PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
       int rgba_index = (y * cachedImage->width + x) * 4;
 
       // Conversion from RGBA to BGRA
-      argb_data[rgba_index + 0] = imageData[rgba_index + 2]; // A
-      argb_data[rgba_index + 1] = imageData[rgba_index + 1]; // B
-      argb_data[rgba_index + 2] = imageData[rgba_index + 0]; // G
-      argb_data[rgba_index + 3] = imageData[rgba_index + 2]; // R
+      argb_data[rgba_index + 0] = imageData[rgba_index + 2]; // B
+      argb_data[rgba_index + 1] = imageData[rgba_index + 1]; // G
+      argb_data[rgba_index + 2] = imageData[rgba_index + 0]; // R
+      argb_data[rgba_index + 3] = imageData[rgba_index + 3]; // A
     }
   }
 

@@ -15,9 +15,9 @@ string getResourcesPath(PF_InData *in_data) {
   PF_GET_PLATFORM_DATA(PF_PlatData_EXE_FILE_PATH_W, &pluginFolderPath);
 
 #ifdef AE_OS_WIN
-#error "The resource path is only relevant for macOS"
-#endif
-#ifdef AE_OS_MAC
+// The resource path is only relevant for macOS
+  return "";
+#else
   NSUInteger length = 0;
   A_UTF16Char *tmp = pluginFolderPath;
   while (*tmp++ != 0) {
@@ -26,8 +26,8 @@ string getResourcesPath(PF_InData *in_data) {
   NSString *newStr = [[NSString alloc] initWithCharacters:pluginFolderPath length:length];
   string resourcePath([newStr UTF8String]);
   resourcePath += "/Contents/Resources/";
-#endif
   return resourcePath;
+#endif
 }
 
 /**
