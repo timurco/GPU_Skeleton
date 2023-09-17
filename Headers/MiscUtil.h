@@ -19,7 +19,7 @@ using namespace std;
                                     : string("Unknown"))
 
 #define GET_APPLE_CPU(cpu)                        \
-  (cpu == APPLE_M1      ? string("Apple Silicon") \
+  (cpu == APPLE_SILICONE      ? string("Apple Silicon") \
    : cpu == APPLE_INTEL ? string("Apple Intel")   \
                         : string("Unknown"))
 

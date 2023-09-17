@@ -1,0 +1,23 @@
+---
+BasedOnStyle: Google
+AlignAfterOpenBracket: Align
+AlignConsecutiveDeclarations: 'true'
+AlignEscapedNewlines: Left
+AlignOperands: 'false'
+AllowShortBlocksOnASingleLine: 'true'
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortLambdasOnASingleLine: None
+AlwaysBreakTemplateDeclarations: 'Yes'
+BreakBeforeBinaryOperators: NonAssignment
+ColumnLimit: '140'
+ConstructorInitializerIndentWidth: '12'
+Cpp11BracedListStyle: 'false'
+IncludeBlocks: Merge
+IndentWidth: '2'
+ObjCBlockIndentWidth: '2'
+PenaltyBreakAssignment: '50'
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: 'false'
+SpacesBeforeTrailingComments: '1'
+TabWidth: '2'
+...
