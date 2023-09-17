@@ -49,24 +49,18 @@
 #include "String_Utils.h"
 #include "entry.h"
 
-#ifdef AE_OS_WIN
+#ifdef _WIN32
 #include <Windows.h>
 #endif
 
 #include <chrono>
 #include <regex>
-
 #include "AEUtil.h"
 #include "Config.h"
 #include "Debug.h"
 #include "MiscUtil.h"
 
-enum {
-  GPU_SKELETON_INPUT = 0,
-  GPU_SKELETON_ABOUT,
-  GPU_SKELETON_PARAMETER,
-  GPU_SKELETON_NUM_PARAMS
-};
+enum { GPU_SKELETON_INPUT = 0, GPU_SKELETON_ABOUT, GPU_SKELETON_PARAMETER, GPU_SKELETON_NUM_PARAMS };
 
 enum {
   Parameter_DISK_ID = 1,
@@ -81,15 +75,14 @@ typedef struct {
 
 extern "C" {
 
-DllExport PF_Err EffectMain(PF_Cmd cmd, PF_InData *in_data, PF_OutData *out_data,
-                            PF_ParamDef *params[], PF_LayerDef *output, void *extra);
+DllExport PF_Err EffectMain(PF_Cmd cmd, PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output, void *extra);
 }
 
 typedef struct {
-  PF_Handle drawbotDataH;
-  int channels;
-  int width;
-  int height;
+  PF_Handle           drawbotDataH;
+  int                 channels;
+  int                 width;
+  int                 height;
   DRAWBOT_PixelLayout pixelLayout;
 } CachedImage;
 
@@ -103,13 +96,11 @@ enum { APPLE_NONE = 0, APPLE_SILICONE, APPLE_INTEL };
 typedef A_long AppleCPU;
 
 struct DeviceInfo {
-  DeviceInfo() noexcept :
-    appleCPU(APPLE_NONE),
-    GPU(0) {}  // Assuming PF_SpecVersion has a default constructor
+  DeviceInfo() noexcept : appleCPU(APPLE_NONE), GPU(0) {} // Assuming PF_SpecVersion has a default constructor
 
-  AppleCPU appleCPU;
+  AppleCPU         appleCPU;
   PF_GPU_Framework GPU;
-  PF_SpecVersion version;
+  PF_SpecVersion   version;
 };
 
 //      FX_LOG_VAL("outputRect", outputRect);
@@ -119,10 +110,10 @@ struct DeviceInfo {
 
 struct DebugInfo {
   DebugInfo() noexcept {}
-  PF_LRect result_rect;
-  PF_LRect output_rect;
-  PF_LRect request_rect;
-  PF_LRect max_result_rect;
+  PF_LRect    result_rect;
+  PF_LRect    output_rect;
+  PF_LRect    request_rect;
+  PF_LRect    max_result_rect;
   PF_LayerDef out_world;
   PF_LayerDef tmp_world;
   PF_LayerDef in_world;
@@ -130,18 +121,17 @@ struct DebugInfo {
 
 struct GlobalData {
   GlobalData() noexcept : aboutImage(nullptr) {}
-  PF_Handle aboutImage;
-  shared_ptr<SceneInfo> sceneInfo;
+  PF_Handle              aboutImage;
+  shared_ptr<SceneInfo>  sceneInfo;
   shared_ptr<DeviceInfo> deviceInfo;
-  DebugInfo debugInfo;
+  DebugInfo              debugInfo;
 };
 
-PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                 PF_LayerDef *output, PF_EventExtra *event_extra, PF_Pixel some_color);
+PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output, PF_EventExtra *event_extra,
+                 PF_Pixel some_color);
 
-PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage);
+PF_Err LoadAboutImage(PF_InData *in_data, CachedImage *cachedImage);
 
-PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                       PF_LayerDef *output, PF_EventExtra *extra);
+PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output, PF_EventExtra *extra);
 
-#endif  // GPU_Skeleton_H
+#endif // GPU_Skeleton_H

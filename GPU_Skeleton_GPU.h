@@ -9,7 +9,6 @@
 #define GPU_Skeleton_GPU_H
 
 #include <stdio.h>
-
 #include "GPU_Skeleton.h"
 
 #if _WIN32
@@ -19,7 +18,6 @@
 #include <OpenCL/cl.h>
 #define HAS_METAL 1
 #include <Metal/Metal.h>
-
 #include "GPU_Skeleton_Kernel.metal.h"
 #endif
 
@@ -49,11 +47,8 @@ inline PF_Err CL2Err(cl_int cl_result) {
 
 #define CL_ERR(FUNC) ERR(CL2Err(FUNC))
 
-extern void Main_CUDA(float const* src, float* dst, unsigned int srcPitch,
-  unsigned int dstPitch, int is16f,
-  unsigned int width,
-  unsigned int height,
-  float parameter, float time);
+extern void Main_CUDA(float const *src, float *dst, unsigned int srcPitch, unsigned int dstPitch, int is16f, unsigned int width,
+                      unsigned int height, float parameter, float time);
 
 // GPU data initialized at GPU setup and used during render.
 struct OpenCLGPUData {
@@ -67,22 +62,20 @@ struct MetalGPUData {
 #endif
 
 typedef struct {
-  int mSrcPitch;
-  int mDstPitch;
-  int m16f;
-  int mWidth;
-  int mHeight;
+  int   mSrcPitch;
+  int   mDstPitch;
+  int   m16f;
+  int   mWidth;
+  int   mHeight;
   float mParameter;
   float mTime;
 } InputKernelParams;
 
 PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSetupExtra *extraP);
 
-PF_Err GPUDeviceSetdown(PF_InData *in_dataP, PF_OutData *out_dataP,
-                        PF_GPUDeviceSetdownExtra *extraP);
+PF_Err GPUDeviceSetdown(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSetdownExtra *extraP);
 
-PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat pixel_format,
-                      PF_EffectWorld *input_worldP, PF_EffectWorld *output_worldP,
-                      PF_SmartRenderExtra *extraP, PluginInputParams *infoP);
+PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat pixel_format, PF_EffectWorld *input_worldP,
+                      PF_EffectWorld *output_worldP, PF_SmartRenderExtra *extraP, PluginInputParams *infoP);
 
 #endif /* GPU_Skeleton_GPU_H */

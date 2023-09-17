@@ -7,20 +7,16 @@
 
 #include <iomanip>
 #include <iostream>
-
 #include "GPU_Skeleton.h"
 #include "GPU_Skeleton_GPU.h"
 
-static PF_Err About(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                    PF_LayerDef *output) {
-  PF_SPRINTF(out_data->return_msg, "%s, v%d.%d\r%s", CONFIG_NAME, MAJOR_VERSION, MINOR_VERSION,
-             CONFIG_DESCRIPTION);
+static PF_Err About(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output) {
+  PF_SPRINTF(out_data->return_msg, "%s, v%d.%d\r%s", CONFIG_NAME, MAJOR_VERSION, MINOR_VERSION, CONFIG_DESCRIPTION);
 
   return PF_Err_NONE;
 }
 
-static PF_Err GlobalSetdown(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                            PF_LayerDef *output) {
+static PF_Err GlobalSetdown(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output) {
   PF_Err err = PF_Err_NONE;
 
   AEGP_SuiteHandler suites(in_data->pica_basicP);
@@ -28,8 +24,7 @@ static PF_Err GlobalSetdown(PF_InData *in_data, PF_OutData *out_data, PF_ParamDe
   FX_LOG("Clean data");
 
   if (in_data->global_data) {
-    auto *globalData = reinterpret_cast<GlobalData *>(
-        suites.HandleSuite1()->host_lock_handle(in_data->global_data));
+    auto *                  globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
     unique_ptr<CachedImage> cachedImage(reinterpret_cast<CachedImage *>(globalData->aboutImage));
 
     globalData->aboutImage = nullptr;
@@ -46,12 +41,10 @@ static PF_Err GlobalSetdown(PF_InData *in_data, PF_OutData *out_data, PF_ParamDe
   return err;
 }
 
-static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                          PF_LayerDef *output) {
-  PF_Err err = PF_Err_NONE;
+static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output) {
+  PF_Err            err = PF_Err_NONE;
   AEGP_SuiteHandler suites(in_data->pica_basicP);
-  out_data->my_version =
-      PF_VERSION(MAJOR_VERSION, MINOR_VERSION, BUG_VERSION, STAGE_VERSION, BUILD_VERSION);
+  out_data->my_version = PF_VERSION(MAJOR_VERSION, MINOR_VERSION, BUG_VERSION, STAGE_VERSION, BUILD_VERSION);
 
 #ifdef DEBUG
   FX_LOG("DEBUG VERSION");
@@ -59,32 +52,26 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   FX_LOG_VAL("STAGE VERSION", STAGE_VERSION);
   FX_LOG_VAL("FS_VERSION", out_data->my_version);
 
-  out_data->out_flags = PF_OutFlag_CUSTOM_UI |  //  ABOUT
-                        PF_OutFlag_PIX_INDEPENDENT | PF_OutFlag_DEEP_COLOR_AWARE |
-                        PF_OutFlag_NON_PARAM_VARY | PF_OutFlag_SEND_UPDATE_PARAMS_UI |
-                        PF_OutFlag_I_DO_DIALOG;
+  out_data->out_flags = PF_OutFlag_CUSTOM_UI | //  ABOUT
+      PF_OutFlag_PIX_INDEPENDENT | PF_OutFlag_DEEP_COLOR_AWARE | PF_OutFlag_NON_PARAM_VARY | PF_OutFlag_SEND_UPDATE_PARAMS_UI
+      | PF_OutFlag_I_DO_DIALOG;
 
-  out_data->out_flags2 = PF_OutFlag2_FLOAT_COLOR_AWARE | PF_OutFlag2_SUPPORTS_SMART_RENDER |
-                         PF_OutFlag2_CUSTOM_UI_ASYNC_MANAGER |
-                         PF_OutFlag2_SUPPORTS_THREADED_RENDERING;
+  out_data->out_flags2 = PF_OutFlag2_FLOAT_COLOR_AWARE | PF_OutFlag2_SUPPORTS_SMART_RENDER | PF_OutFlag2_CUSTOM_UI_ASYNC_MANAGER
+      | PF_OutFlag2_SUPPORTS_THREADED_RENDERING;
 
   // Allocate a memory block of size sizeof(GlobalData) using the host_new_handle() function from
   // the HandleSuite1 structure, which returns a memory descriptor for the created block, and store
   // it in the variable globalDataH.
   PF_Handle globalDataH = suites.HandleSuite1()->host_new_handle(sizeof(GlobalData));
-  if (!globalDataH) {
-    return PF_Err_INTERNAL_STRUCT_DAMAGED;
-  }
+  if (!globalDataH) { return PF_Err_INTERNAL_STRUCT_DAMAGED; }
 
   // Store the memory descriptor inside out_data for passing it to other functions.
   out_data->global_data = globalDataH;
 
   // Lock the memory block using host_lock_handle() to work with it and cast it to the type
   // GlobalData*.
-  GlobalData* globalData = reinterpret_cast<GlobalData*>(suites.HandleSuite1()->host_lock_handle(globalDataH));
-  if (!globalData) {
-    return PF_Err_INTERNAL_STRUCT_DAMAGED;
-  }
+  GlobalData *globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(globalDataH));
+  if (!globalData) { return PF_Err_INTERNAL_STRUCT_DAMAGED; }
 
   // Initialize the GlobalData structure.
   AEFX_CLR_STRUCT(*globalData);
@@ -92,7 +79,7 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   // Create a shared_ptr of SceneInfo object and store it in the sceneInfo field of the GlobalData
   // structure.
   globalData->sceneInfo = make_shared<SceneInfo>();
-  globalData->deviceInfo = make_shared<DeviceInfo> ();
+  globalData->deviceInfo = make_shared<DeviceInfo>();
 
 // Set the Debug Info GPU type based on available frameworks.
 #if HAS_CUDA
@@ -129,9 +116,8 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
 
   // For Premiere - declare supported pixel formats
   if (in_data->appl_id == 'PrMr') {
-    AEFX_SuiteScoper<PF_PixelFormatSuite1> pixelFormatSuite =
-        AEFX_SuiteScoper<PF_PixelFormatSuite1>(in_data, kPFPixelFormatSuite,
-                                               kPFPixelFormatSuiteVersion1, out_data);
+    AEFX_SuiteScoper<PF_PixelFormatSuite1> pixelFormatSuite = AEFX_SuiteScoper<PF_PixelFormatSuite1>(in_data, kPFPixelFormatSuite,
+                                                                                                     kPFPixelFormatSuiteVersion1, out_data);
 
     //	Add the pixel formats we support in order of preference.
     (*pixelFormatSuite->ClearSupportedPixelFormats)(in_data->effect_ref);
@@ -143,16 +129,14 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   return err;
 }
 
-static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                          PF_LayerDef *output) {
-  PF_Err err = PF_Err_NONE;
+static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output) {
+  PF_Err            err = PF_Err_NONE;
   AEGP_SuiteHandler suites(in_data->pica_basicP);
 
   PF_ParamDef def;
   AEFX_CLR_STRUCT(def);
 
-  auto *globalData =
-      reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
+  auto *       globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
   CachedImage *cachedImage = reinterpret_cast<CachedImage *>(globalData->aboutImage);
   suites.HandleSuite1()->host_unlock_handle(in_data->global_data);
 
@@ -160,7 +144,7 @@ static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   def.ui_width = cachedImage->width;
   def.ui_height = cachedImage->height + 45.0f;
 
-  PF_ADD_NULL("About", GPU_SKELETON_ABOUT);  // "UI");
+  PF_ADD_NULL("About", GPU_SKELETON_ABOUT); // "UI");
 
   if (!err) {
     // Referencing Examples/UI/CCU
@@ -180,15 +164,14 @@ static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   }
 
   AEFX_CLR_STRUCT(def);
-  PF_ADD_FIXED(PARAMETER_STR, 0, MAX_PARAMETER, 0, MAX_PARAMETER, 0, 1, PF_ValueDisplayFlag_NONE, 0,
-               GPU_SKELETON_PARAMETER);
+  PF_ADD_FIXED(PARAMETER_STR, 0, MAX_PARAMETER, 0, MAX_PARAMETER, 0, 1, PF_ValueDisplayFlag_NONE, 0, GPU_SKELETON_PARAMETER);
 
   out_data->num_params = GPU_SKELETON_NUM_PARAMS;
 
   // Premiere Pro/Elements does not support this suite
   if (in_data->appl_id != 'PrMr') {
-    AEFX_SuiteScoper<PF_EffectUISuite1> effect_ui_suiteP = AEFX_SuiteScoper<PF_EffectUISuite1>(
-        in_data, kPFEffectUISuite, kPFEffectUISuiteVersion1, out_data);
+    AEFX_SuiteScoper<PF_EffectUISuite1> effect_ui_suiteP = AEFX_SuiteScoper<PF_EffectUISuite1>(in_data, kPFEffectUISuite,
+                                                                                               kPFEffectUISuiteVersion1, out_data);
 
     ERR(effect_ui_suiteP->PF_SetOptionsButtonName(in_data->effect_ref, "URL..."));
   }
@@ -208,19 +191,17 @@ static PF_Err PreRender(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PreRender
 
   //    AEGP_SuiteHandler suites(in_dataP->pica_basicP);
   PF_CheckoutResult in_result;
-  PF_RenderRequest req = extraP->input->output_request;
+  PF_RenderRequest  req = extraP->input->output_request;
   extraP->output->flags |= PF_RenderOutputFlag_GPU_RENDER_POSSIBLE;
 
-  PluginInputParams *infoP =
-      reinterpret_cast<PluginInputParams *>(malloc(sizeof(PluginInputParams)));
+  PluginInputParams *infoP = reinterpret_cast<PluginInputParams *>(malloc(sizeof(PluginInputParams)));
 
   if (infoP) {
     // Querying parameters to demoonstrate they are available at PreRender, and data can be passed
     // from PreRender to Render with pre_render_data.
     PF_ParamDef cur_param;
 
-    ERR(PF_CHECKOUT_PARAM(in_dataP, GPU_SKELETON_PARAMETER, in_dataP->current_time,
-                          in_dataP->time_step, in_dataP->time_scale, &cur_param));
+    ERR(PF_CHECKOUT_PARAM(in_dataP, GPU_SKELETON_PARAMETER, in_dataP->current_time, in_dataP->time_step, in_dataP->time_scale, &cur_param));
 
     infoP->mParameter = cur_param.u.fd.value / 65536.0f;
     infoP->mParameter /= 100.0f;
@@ -232,9 +213,8 @@ static PF_Err PreRender(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PreRender
 
     AEGP_SuiteHandler suites(in_dataP->pica_basicP);
 
-    ERR(extraP->cb->checkout_layer(in_dataP->effect_ref, GPU_SKELETON_INPUT, GPU_SKELETON_INPUT,
-                                   &req, in_dataP->current_time, in_dataP->time_step,
-                                   in_dataP->time_scale, &in_result));
+    ERR(extraP->cb->checkout_layer(in_dataP->effect_ref, GPU_SKELETON_INPUT, GPU_SKELETON_INPUT, &req, in_dataP->current_time,
+                                   in_dataP->time_step, in_dataP->time_scale, &in_result));
 
     if (!err) {
       UnionLRect(&in_result.result_rect, &extraP->output->result_rect);
@@ -249,9 +229,8 @@ static PF_Err PreRender(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PreRender
   return err;
 }
 
-static PF_Err SmartRenderCPU(PF_InData *in_data, PF_OutData *out_data, PF_PixelFormat pixel_format,
-                             PF_EffectWorld *input_worldP, PF_EffectWorld *output_worldP,
-                             PF_SmartRenderExtra *extraP, PluginInputParams *infoP) {
+static PF_Err SmartRenderCPU(PF_InData *in_data, PF_OutData *out_data, PF_PixelFormat pixel_format, PF_EffectWorld *input_worldP,
+                             PF_EffectWorld *output_worldP, PF_SmartRenderExtra *extraP, PluginInputParams *infoP) {
   PF_Err err = PF_Err_NONE;
 
   PF_SPRINTF(out_data->return_msg,
@@ -264,8 +243,7 @@ static PF_Err SmartRenderCPU(PF_InData *in_data, PF_OutData *out_data, PF_PixelF
   return err;
 }
 
-static PF_Err SmartRender(PF_InData *in_data, PF_OutData *out_data, PF_SmartRenderExtra *extraP,
-                          bool isGPU) {
+static PF_Err SmartRender(PF_InData *in_data, PF_OutData *out_data, PF_SmartRenderExtra *extraP, bool isGPU) {
   PF_Err err = PF_Err_NONE, err2 = PF_Err_NONE;
 
   PF_EffectWorld *input_worldP = NULL, *output_worldP = NULL;
@@ -275,22 +253,19 @@ static PF_Err SmartRender(PF_InData *in_data, PF_OutData *out_data, PF_SmartRend
   PluginInputParams *infoP = reinterpret_cast<PluginInputParams *>(extraP->input->pre_render_data);
 
   if (infoP) {
-    ERR((
-        extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT, &input_worldP)));
+    ERR((extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT, &input_worldP)));
 
     ERR(extraP->cb->checkout_output(in_data->effect_ref, &output_worldP));
 
-    AEFX_SuiteScoper<PF_WorldSuite2> world_suite =
-        AEFX_SuiteScoper<PF_WorldSuite2>(in_data, kPFWorldSuite, kPFWorldSuiteVersion2, out_data);
-    PF_PixelFormat pixel_format = PF_PixelFormat_INVALID;
+    AEFX_SuiteScoper<PF_WorldSuite2> world_suite = AEFX_SuiteScoper<PF_WorldSuite2>(in_data, kPFWorldSuite, kPFWorldSuiteVersion2,
+                                                                                    out_data);
+    PF_PixelFormat                   pixel_format = PF_PixelFormat_INVALID;
     ERR(world_suite->PF_GetPixelFormat(input_worldP, &pixel_format));
 
     if (isGPU) {
-      ERR(SmartRenderGPU(in_data, out_data, pixel_format, input_worldP, output_worldP, extraP,
-                         infoP));
+      ERR(SmartRenderGPU(in_data, out_data, pixel_format, input_worldP, output_worldP, extraP, infoP));
     } else {
-      ERR(SmartRenderCPU(in_data, out_data, pixel_format, input_worldP, output_worldP, extraP,
-                         infoP));
+      ERR(SmartRenderCPU(in_data, out_data, pixel_format, input_worldP, output_worldP, extraP, infoP));
     }
 
     ERR2(extraP->cb->checkin_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT));
@@ -300,8 +275,7 @@ static PF_Err SmartRender(PF_InData *in_data, PF_OutData *out_data, PF_SmartRend
   return err;
 }
 
-static PF_Err PopDialog(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                        PF_LayerDef *output) {
+static PF_Err PopDialog(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output) {
   PF_Err err = PF_Err_NONE;
 
   out_data->out_flags |= PF_OutFlag_DISPLAY_ERROR_MESSAGE;
@@ -321,8 +295,7 @@ static PF_Err PopDialog(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *p
   return err;
 }
 
-static PF_Err HandleEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                          PF_LayerDef *output, PF_EventExtra *extra) {
+static PF_Err HandleEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output, PF_EventExtra *extra) {
   PF_Err err = PF_Err_NONE;
 
   switch (extra->e_type) {
@@ -342,24 +315,20 @@ static PF_Err HandleEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   return err;
 }
 
-extern "C" DllExport PF_Err PluginDataEntryFunction(PF_PluginDataPtr inPtr,
-                                                    PF_PluginDataCB inPluginDataCallBackPtr,
-                                                    SPBasicSuite *inSPBasicSuitePtr,
-                                                    const char *inHostName,
-                                                    const char *inHostVersion) {
+extern "C" DllExport PF_Err PluginDataEntryFunction(PF_PluginDataPtr inPtr, PF_PluginDataCB inPluginDataCallBackPtr,
+                                                    SPBasicSuite *inSPBasicSuitePtr, const char *inHostName, const char *inHostVersion) {
   PF_Err result = PF_Err_INVALID_CALLBACK;
 
   result = PF_REGISTER_EFFECT(inPtr, inPluginDataCallBackPtr,
-                              CONFIG_NAME,        // Name
-                              CONFIG_MATCH_NAME,  // Match Name
-                              CONFIG_CATEGORY,    // Category
-                              AE_RESERVED_INFO);  // Reserved Info
+                              CONFIG_NAME,       // Name
+                              CONFIG_MATCH_NAME, // Match Name
+                              CONFIG_CATEGORY,   // Category
+                              AE_RESERVED_INFO); // Reserved Info
 
   return result;
 }
 
-PF_Err EffectMain(PF_Cmd cmd, PF_InData *in_dataP, PF_OutData *out_data, PF_ParamDef *params[],
-                  PF_LayerDef *output, void *extra) {
+PF_Err EffectMain(PF_Cmd cmd, PF_InData *in_dataP, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output, void *extra) {
   PF_Err err = PF_Err_NONE;
 
   try {
@@ -386,8 +355,7 @@ PF_Err EffectMain(PF_Cmd cmd, PF_InData *in_dataP, PF_OutData *out_data, PF_Para
         break;
 
       case PF_Cmd_EVENT:
-        err = HandleEvent(in_dataP, out_data, params, output,
-                          reinterpret_cast<PF_EventExtra *>(extra));
+        err = HandleEvent(in_dataP, out_data, params, output, reinterpret_cast<PF_EventExtra *>(extra));
         break;
 
       case PF_Cmd_SMART_PRE_RENDER:

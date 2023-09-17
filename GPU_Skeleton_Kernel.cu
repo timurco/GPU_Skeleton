@@ -5,35 +5,29 @@
 #include "PrGPU/KernelSupport/KernelMemory.h"
 
 #if GF_DEVICE_TARGET_DEVICE
-GF_KERNEL_FUNCTION(MainKernel,
-                   ((const GF_PTR(float4))(inSrc))((GF_PTR(float4))(outDst)),
+GF_KERNEL_FUNCTION(MainKernel, ((const GF_PTR(float4))(inSrc))((GF_PTR(float4))(outDst)),
                    ((int)(inSrcPitch))((int)(inDstPitch))((int)(in16f))((unsigned int)(inWidth))((unsigned int)(inHeight))
                    // Variables
                    ((float)(inParameter))((float)(inTime)),
                    // Position
-                   ((uint2)(inXY)(KERNEL_XY)))
-{
+                   ((uint2)(inXY)(KERNEL_XY))) {
   if (inXY.x < inWidth && inXY.y < inHeight) {
     //    A    B    G    R   <---- Inverted
     // {1.0, 1.0, 1.0, 1.0}
     //    W    X    Y    Z
-    float2 iResolution = {(float)inWidth, (float)inHeight};
-    float2 texCoord = {(float)inXY.x, (float)inXY.y};
-    float2 uv = {
-      texCoord.x / iResolution.x,
-      texCoord.y / iResolution.y
-    };
-    
+    float2 iResolution = { (float)inWidth, (float)inHeight };
+    float2 texCoord = { (float)inXY.x, (float)inXY.y };
+    float2 uv = { texCoord.x / iResolution.x, texCoord.y / iResolution.y };
+
     const float pixelSize = 1.0f / iResolution.x;
-    
+
     float2 st = uv;
-    st.x = st.x + cos(st.y*100.0 + inTime) * 5*pixelSize; // Wave Moves
-    
-    uint2 offset = {(unsigned int)(st.x * iResolution.x),
-                    (unsigned int)(st.y * iResolution.y)};
+    st.x = st.x + cos(st.y * 100.0 + inTime) * 5 * pixelSize; // Wave Moves
+
+    uint2 offset = { (unsigned int)(st.x * iResolution.x), (unsigned int)(st.y * iResolution.y) };
     offset.x = min(max(offset.x, (unsigned int)(0)), inWidth);
     offset.y = min(max(offset.y, (unsigned int)(0)), inHeight);
-  
+
     float4 fragColor = ReadFloat4(inSrc, offset.y * inSrcPitch + offset.x, !!in16f);
     fragColor.x += inParameter;
 
@@ -48,19 +42,12 @@ GF_KERNEL_FUNCTION(MainKernel,
 
 #if __NVCC__
 
-void Main_CUDA(float const *src, float *dst, unsigned int srcPitch,
-               unsigned int dstPitch, int is16f,
-               unsigned int width,
-               unsigned int height,
-               float parameter, float time)
-{
+void Main_CUDA(float const *src, float *dst, unsigned int srcPitch, unsigned int dstPitch, int is16f, unsigned int width,
+               unsigned int height, float parameter, float time) {
   dim3 blockDim(16, 16, 1);
-  dim3 gridDim((width + blockDim.x - 1) / blockDim.x,
-               (height + blockDim.y - 1) / blockDim.y, 1);
+  dim3 gridDim((width + blockDim.x - 1) / blockDim.x, (height + blockDim.y - 1) / blockDim.y, 1);
 
-  MainKernel<<<gridDim, blockDim, 0>>>(
-      (float4 const *)src, (float4 *)dst, srcPitch, dstPitch, is16f, width,
-      height, parameter, time);
+  MainKernel<<<gridDim, blockDim, 0>>>((float4 const *)src, (float4 *)dst, srcPitch, dstPitch, is16f, width, height, parameter, time);
 
   cudaDeviceSynchronize();
 }

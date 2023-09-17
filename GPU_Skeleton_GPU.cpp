@@ -12,20 +12,16 @@
 #if HAS_METAL
 PF_Err NSError2PFErr(NSError *inError) {
   if (inError) {
-    return PF_Err_INTERNAL_STRUCT_DAMAGED;  // For debugging, uncomment above
-                                            // line and set breakpoint here
+    return PF_Err_INTERNAL_STRUCT_DAMAGED; // For debugging, uncomment above
+                                           // line and set breakpoint here
   }
   return PF_Err_NONE;
 }
-#endif  // HAS_METAL
+#endif // HAS_METAL
 
-static size_t RoundUp(size_t inValue, size_t inMultiple) {
-  return inValue ? ((inValue + inMultiple - 1) / inMultiple) * inMultiple : 0;
-}
+static size_t RoundUp(size_t inValue, size_t inMultiple) { return inValue ? ((inValue + inMultiple - 1) / inMultiple) * inMultiple : 0; }
 
-static size_t DivideRoundUp(size_t inValue, size_t inMultiple) {
-  return inValue ? (inValue + inMultiple - 1) / inMultiple : 0;
-}
+static size_t DivideRoundUp(size_t inValue, size_t inMultiple) { return inValue ? (inValue + inMultiple - 1) / inMultiple : 0; }
 
 /**
 
@@ -50,26 +46,21 @@ as input parameters.
 
 */
 
-PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
-                      PF_GPUDeviceSetupExtra *extraP) {
-  PF_Err err = PF_Err_NONE;
+PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSetupExtra *extraP) {
+  PF_Err            err = PF_Err_NONE;
   AEGP_SuiteHandler suites(in_dataP->pica_basicP);
-  auto *globalData = reinterpret_cast<GlobalData *>(
-      suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
+  auto *            globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
 
   PF_GPUDeviceInfo device_info;
   AEFX_CLR_STRUCT(device_info);
 
-  AEFX_SuiteScoper<PF_HandleSuite1> handle_suite =
-      AEFX_SuiteScoper<PF_HandleSuite1>(in_dataP, kPFHandleSuite,
-                                        kPFHandleSuiteVersion1, out_dataP);
+  AEFX_SuiteScoper<PF_HandleSuite1> handle_suite = AEFX_SuiteScoper<PF_HandleSuite1>(in_dataP, kPFHandleSuite, kPFHandleSuiteVersion1,
+                                                                                     out_dataP);
 
-  AEFX_SuiteScoper<PF_GPUDeviceSuite1> gpuDeviceSuite =
-      AEFX_SuiteScoper<PF_GPUDeviceSuite1>(
-          in_dataP, kPFGPUDeviceSuite, kPFGPUDeviceSuiteVersion1, out_dataP);
+  AEFX_SuiteScoper<PF_GPUDeviceSuite1> gpuDeviceSuite = AEFX_SuiteScoper<PF_GPUDeviceSuite1>(in_dataP, kPFGPUDeviceSuite,
+                                                                                             kPFGPUDeviceSuiteVersion1, out_dataP);
 
-  gpuDeviceSuite->GetDeviceInfo(in_dataP->effect_ref,
-                                extraP->input->device_index, &device_info);
+  gpuDeviceSuite->GetDeviceInfo(in_dataP->effect_ref, extraP->input->device_index, &device_info);
 
   // Load and compile the kernel - a real plugin would cache binaries to disk
 
@@ -77,29 +68,25 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
     // Nothing to do here. CUDA Kernel statically linked
     out_dataP->out_flags2 = PF_OutFlag2_SUPPORTS_GPU_RENDER_F32;
   } else if (extraP->input->what_gpu == PF_GPU_Framework_OPENCL) {
-    PF_Handle gpu_dataH = handle_suite->host_new_handle(sizeof(OpenCLGPUData));
+    PF_Handle      gpu_dataH = handle_suite->host_new_handle(sizeof(OpenCLGPUData));
     OpenCLGPUData *cl_gpu_data = reinterpret_cast<OpenCLGPUData *>(*gpu_dataH);
 
     cl_int result = CL_SUCCESS;
 
     char const *k16fString = "#define GF_OPENCL_SUPPORTS_16F 0\n";
 
-    size_t sizes[] = {strlen(k16fString),
-                      strlen(kGPU_Skeleton_Kernel_OpenCLString)};
-    char const *strings[] = {k16fString, kGPU_Skeleton_Kernel_OpenCLString};
-    cl_context context = (cl_context)device_info.contextPV;
+    size_t       sizes[] = { strlen(k16fString), strlen(kGPU_Skeleton_Kernel_OpenCLString) };
+    char const * strings[] = { k16fString, kGPU_Skeleton_Kernel_OpenCLString };
+    cl_context   context = (cl_context)device_info.contextPV;
     cl_device_id device = (cl_device_id)device_info.devicePV;
 
     cl_program program;
     if (!err) {
-      program = clCreateProgramWithSource(context, 2, &strings[0], &sizes[0],
-                                          &result);
+      program = clCreateProgramWithSource(context, 2, &strings[0], &sizes[0], &result);
       CL_ERR(result);
     }
 
-    CL_ERR(clBuildProgram(program, 1, &device,
-                          "-cl-single-precision-constant -cl-fast-relaxed-math",
-                          0, 0));
+    CL_ERR(clBuildProgram(program, 1, &device, "-cl-single-precision-constant -cl-fast-relaxed-math", 0, 0));
 
     if (!err) {
       cl_gpu_data->main_kernel = clCreateKernel(program, "MainKernel", &result);
@@ -115,21 +102,15 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
     ScopedAutoreleasePool pool;
 
     // Create a library from source
-    NSString *source =
-        [NSString stringWithCString:kGPU_Skeleton_Kernel_MetalString
-                           encoding:NSUTF8StringEncoding];
+    NSString *    source = [NSString stringWithCString:kGPU_Skeleton_Kernel_MetalString encoding:NSUTF8StringEncoding];
     id<MTLDevice> device = (id<MTLDevice>)device_info.devicePV;
 
-    NSError *error = nil;
-    id<MTLLibrary> library =
-        [[device newLibraryWithSource:source options:nil error:&error]
-            autorelease];
+    NSError *      error = nil;
+    id<MTLLibrary> library = [[device newLibraryWithSource:source options:nil error:&error] autorelease];
 
     // An error code is set for Metal compile warnings, so use nil library as
     // the error signal
-    if (!err && !library) {
-      err = NSError2PFErr(error);
-    }
+    if (!err && !library) { err = NSError2PFErr(error); }
 
     // For debugging only. This will contain Metal compile warnings and erorrs.
     NSString *getError = error.localizedDescription;
@@ -138,7 +119,7 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
       globalData->sceneInfo->errorLog = "";
 
       string input = getError.UTF8String;
-      regex re(R"((\d+:\d+).*(error): (.*)\n(?:\s*)(.*)\n)");
+      regex  re(R"((\d+:\d+).*(error): (.*)\n(?:\s*)(.*)\n)");
       smatch m;
 
       while (regex_search(input, m, re)) {
@@ -146,37 +127,30 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
         string type = m[2].str();
         string message = m[3].str();
         string code = m[4].str();
-        globalData->sceneInfo->errorLog +=
-            type + " [" + number + "] " + message + ": " + code + "\n";
+        globalData->sceneInfo->errorLog += type + " [" + number + "] " + message + ": " + code + "\n";
         input = m.suffix().str();
       }
       cout << globalData->sceneInfo->errorLog << endl;
-      
+
       (*in_dataP->utils->ansi.sprintf)(out_dataP->return_msg, globalData->sceneInfo->errorLog.c_str());
       out_dataP->out_flags |= PF_OutFlag_DISPLAY_ERROR_MESSAGE;
     }
 
-    PF_Handle metal_handle =
-        handle_suite->host_new_handle(sizeof(MetalGPUData));
+    PF_Handle     metal_handle = handle_suite->host_new_handle(sizeof(MetalGPUData));
     MetalGPUData *metal_data = reinterpret_cast<MetalGPUData *>(*metal_handle);
 
     // Create pipeline state from function extracted from library
     if (err == PF_Err_NONE) {
       id<MTLFunction> main_function = nil;
 
-      NSString *func_name = [NSString stringWithCString:"MainKernel"
-                                               encoding:NSUTF8StringEncoding];
+      NSString *func_name = [NSString stringWithCString:"MainKernel" encoding:NSUTF8StringEncoding];
 
       main_function = [[library newFunctionWithName:func_name] autorelease];
 
-      if (!main_function) {
-        err = PF_Err_INTERNAL_STRUCT_DAMAGED;
-      }
+      if (!main_function) { err = PF_Err_INTERNAL_STRUCT_DAMAGED; }
 
       if (!err) {
-        metal_data->main_kernel =
-            [device newComputePipelineStateWithFunction:main_function
-                                                  error:&error];
+        metal_data->main_kernel = [device newComputePipelineStateWithFunction:main_function error:&error];
         err = NSError2PFErr(error);
       }
 
@@ -195,19 +169,17 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP,
   return err;
 }
 
-PF_Err GPUDeviceSetdown(PF_InData *in_dataP, PF_OutData *out_dataP,
-                        PF_GPUDeviceSetdownExtra *extraP) {
+PF_Err GPUDeviceSetdown(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSetdownExtra *extraP) {
   PF_Err err = PF_Err_NONE;
 
   if (extraP->input->what_gpu == PF_GPU_Framework_OPENCL) {
-    PF_Handle gpu_dataH = (PF_Handle)extraP->input->gpu_data;
+    PF_Handle      gpu_dataH = (PF_Handle)extraP->input->gpu_data;
     OpenCLGPUData *cl_gpu_dataP = reinterpret_cast<OpenCLGPUData *>(*gpu_dataH);
 
     (void)clReleaseKernel(cl_gpu_dataP->main_kernel);
 
-    AEFX_SuiteScoper<PF_HandleSuite1> handle_suite =
-        AEFX_SuiteScoper<PF_HandleSuite1>(in_dataP, kPFHandleSuite,
-                                          kPFHandleSuiteVersion1, out_dataP);
+    AEFX_SuiteScoper<PF_HandleSuite1> handle_suite = AEFX_SuiteScoper<PF_HandleSuite1>(in_dataP, kPFHandleSuite, kPFHandleSuiteVersion1,
+                                                                                       out_dataP);
 
     handle_suite->host_dispose_handle(gpu_dataH);
   }
@@ -215,36 +187,28 @@ PF_Err GPUDeviceSetdown(PF_InData *in_dataP, PF_OutData *out_dataP,
   return err;
 }
 
-PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP,
-                      PF_PixelFormat pixel_format, PF_EffectWorld *input_worldP,
-                      PF_EffectWorld *output_worldP,
-                      PF_SmartRenderExtra *extraP, PluginInputParams *infoP) {
+PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat pixel_format, PF_EffectWorld *input_worldP,
+                      PF_EffectWorld *output_worldP, PF_SmartRenderExtra *extraP, PluginInputParams *infoP) {
   PF_Err err = PF_Err_NONE;
 
-  AEFX_SuiteScoper<PF_GPUDeviceSuite1> gpu_suite =
-      AEFX_SuiteScoper<PF_GPUDeviceSuite1>(
-          in_dataP, kPFGPUDeviceSuite, kPFGPUDeviceSuiteVersion1, out_dataP);
+  AEFX_SuiteScoper<PF_GPUDeviceSuite1> gpu_suite = AEFX_SuiteScoper<PF_GPUDeviceSuite1>(in_dataP, kPFGPUDeviceSuite,
+                                                                                        kPFGPUDeviceSuiteVersion1, out_dataP);
 
-  if (pixel_format != PF_PixelFormat_GPU_BGRA128) {
-    err = PF_Err_UNRECOGNIZED_PARAM_TYPE;
-  }
+  if (pixel_format != PF_PixelFormat_GPU_BGRA128) { err = PF_Err_UNRECOGNIZED_PARAM_TYPE; }
   A_long bytes_per_pixel = 16;
 
   PF_GPUDeviceInfo device_info;
-  ERR(gpu_suite->GetDeviceInfo(in_dataP->effect_ref,
-                               extraP->input->device_index, &device_info));
+  ERR(gpu_suite->GetDeviceInfo(in_dataP->effect_ref, extraP->input->device_index, &device_info));
 
   void *src_mem = 0;
   ERR(gpu_suite->GetGPUWorldData(in_dataP->effect_ref, input_worldP, &src_mem));
 
   void *dst_mem = 0;
-  ERR(gpu_suite->GetGPUWorldData(in_dataP->effect_ref, output_worldP,
-                                 &dst_mem));
+  ERR(gpu_suite->GetGPUWorldData(in_dataP->effect_ref, output_worldP, &dst_mem));
 
 #ifdef DEBUG
   AEGP_SuiteHandler suites(in_dataP->pica_basicP);
-  auto *globalData = reinterpret_cast<GlobalData *>(
-      suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
+  auto *            globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
 #endif
 
   // read the parameters
@@ -272,7 +236,7 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP,
   main_params.m16f = (pixel_format != PF_PixelFormat_GPU_BGRA128);
 
   if (!err && extraP->input->what_gpu == PF_GPU_Framework_OPENCL) {
-    PF_Handle gpu_dataH = (PF_Handle)extraP->input->gpu_data;
+    PF_Handle      gpu_dataH = (PF_Handle)extraP->input->gpu_data;
     OpenCLGPUData *cl_gpu_dataP = reinterpret_cast<OpenCLGPUData *>(*gpu_dataH);
 
     cl_mem cl_src_mem = (cl_mem)src_mem;
@@ -281,82 +245,61 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP,
     cl_uint main_param_index = 0;
 
     // Set the arguments
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(cl_mem), &cl_src_mem));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(cl_mem), &cl_dst_mem));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(int), &main_params.mSrcPitch));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(int), &main_params.mDstPitch));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(int), &main_params.m16f));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(int), &main_params.mWidth));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(int), &main_params.mHeight));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(float), &main_params.mParameter));
-    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++,
-                          sizeof(float), &main_params.mTime));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(cl_mem), &cl_src_mem));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(cl_mem), &cl_dst_mem));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(int), &main_params.mSrcPitch));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(int), &main_params.mDstPitch));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(int), &main_params.m16f));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(int), &main_params.mWidth));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(int), &main_params.mHeight));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(float), &main_params.mParameter));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(float), &main_params.mTime));
 
     // Launch the kernel
-    size_t threadBlock[2] = {16, 16};
-    size_t grid[2] = {RoundUp(main_params.mWidth, threadBlock[0]),
-                      RoundUp(main_params.mHeight, threadBlock[1])};
+    size_t threadBlock[2] = { 16, 16 };
+    size_t grid[2] = { RoundUp(main_params.mWidth, threadBlock[0]), RoundUp(main_params.mHeight, threadBlock[1]) };
 
-    CL_ERR(clEnqueueNDRangeKernel((cl_command_queue)device_info.command_queuePV,
-                                  cl_gpu_dataP->main_kernel, 2, 0, grid,
-                                  threadBlock, 0, 0, 0));
+    CL_ERR(
+        clEnqueueNDRangeKernel((cl_command_queue)device_info.command_queuePV, cl_gpu_dataP->main_kernel, 2, 0, grid, threadBlock, 0, 0, 0));
   }
 #if HAS_CUDA
   else if (!err && extraP->input->what_gpu == PF_GPU_Framework_CUDA) {
-    Main_CUDA((const float *)src_mem, (float *)dst_mem, main_params.mSrcPitch,
-              main_params.mDstPitch, main_params.m16f, main_params.mWidth,
+    Main_CUDA((const float *)src_mem, (float *)dst_mem, main_params.mSrcPitch, main_params.mDstPitch, main_params.m16f, main_params.mWidth,
               main_params.mHeight, main_params.mParameter, main_params.mTime);
 
-    if (cudaPeekAtLastError() != cudaSuccess) {
-      err = PF_Err_INTERNAL_STRUCT_DAMAGED;
-    }
+    if (cudaPeekAtLastError() != cudaSuccess) { err = PF_Err_INTERNAL_STRUCT_DAMAGED; }
   }
 #endif
 #if HAS_METAL
   else if (!err && extraP->input->what_gpu == PF_GPU_Framework_METAL) {
     ScopedAutoreleasePool pool;
 
-    Handle metal_handle = (Handle)extraP->input->gpu_data;
+    Handle        metal_handle = (Handle)extraP->input->gpu_data;
     MetalGPUData *metal_dataP = reinterpret_cast<MetalGPUData *>(*metal_handle);
 
     // Set the arguments
     id<MTLDevice> device = (id<MTLDevice>)device_info.devicePV;
 
     id<MTLBuffer> main_param_buffer =
-        [[device newBufferWithBytes:&main_params
-                             length:sizeof(InputKernelParams)
-                            options:MTLResourceStorageModeManaged] autorelease];
+        [[device newBufferWithBytes:&main_params length:sizeof(InputKernelParams) options:MTLResourceStorageModeManaged] autorelease];
 
     // Launch the command
-    id<MTLCommandQueue> queue =
-        (id<MTLCommandQueue>)device_info.command_queuePV;
-    id<MTLCommandBuffer> commandBuffer = [queue commandBuffer];
-    id<MTLComputeCommandEncoder> computeEncoder =
-        [commandBuffer computeCommandEncoder];
-    id<MTLBuffer> src_metal_buffer = (id<MTLBuffer>)src_mem;
-    id<MTLBuffer> dst_metal_buffer = (id<MTLBuffer>)dst_mem;
+    id<MTLCommandQueue>          queue = (id<MTLCommandQueue>)device_info.command_queuePV;
+    id<MTLCommandBuffer>         commandBuffer = [queue commandBuffer];
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    id<MTLBuffer>                src_metal_buffer = (id<MTLBuffer>)src_mem;
+    id<MTLBuffer>                dst_metal_buffer = (id<MTLBuffer>)dst_mem;
 
-    MTLSize threadsPerGroup1 = {
-        [metal_dataP->main_kernel threadExecutionWidth], 16, 1};
-    MTLSize numThreadgroups1 = {
-        DivideRoundUp(output_worldP->width, threadsPerGroup1.width),
-        DivideRoundUp(output_worldP->height, threadsPerGroup1.height), 1};
+    MTLSize threadsPerGroup1 = { [metal_dataP->main_kernel threadExecutionWidth], 16, 1 };
+    MTLSize numThreadgroups1 = { DivideRoundUp(output_worldP->width, threadsPerGroup1.width),
+                                 DivideRoundUp(output_worldP->height, threadsPerGroup1.height), 1 };
 
     if (!err) {
       [computeEncoder setComputePipelineState:metal_dataP->main_kernel];
       [computeEncoder setBuffer:src_metal_buffer offset:0 atIndex:0];
       [computeEncoder setBuffer:dst_metal_buffer offset:0 atIndex:1];
       [computeEncoder setBuffer:main_param_buffer offset:0 atIndex:2];
-      [computeEncoder dispatchThreadgroups:numThreadgroups1
-                     threadsPerThreadgroup:threadsPerGroup1];
+      [computeEncoder dispatchThreadgroups:numThreadgroups1 threadsPerThreadgroup:threadsPerGroup1];
 
       [computeEncoder endEncoding];
       [commandBuffer commit];
@@ -364,7 +307,7 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP,
       err = NSError2PFErr([commandBuffer error]);
     }
   }
-#endif  // HAS_METAL
+#endif // HAS_METAL
 
 #ifdef DEBUG
   suites.HandleSuite1()->host_unlock_handle(in_dataP->global_data);

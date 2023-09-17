@@ -14,7 +14,7 @@
 
 using namespace std;
 
-#ifdef AE_OS_WIN
+#ifdef _WIN32
 //  global compilation flag configuring windows sdk headers
 //  preventing inclusion of min and max macros clashing with <limits>
 #define NOMINMAX 1

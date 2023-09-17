@@ -14,7 +14,7 @@ string getResourcesPath(PF_InData *in_data) {
   A_UTF16Char pluginFolderPath[AEFX_MAX_PATH];
   PF_GET_PLATFORM_DATA(PF_PlatData_EXE_FILE_PATH_W, &pluginFolderPath);
 
-#ifdef AE_OS_WIN
+#ifdef _WIN32
 // The resource path is only relevant for macOS
   return "";
 #else
@@ -47,7 +47,7 @@ void copyConvertStringLiteralIntoUTF16(const wchar_t *inputString, A_UTF16Char *
                    reinterpret_cast<UInt8 *>(destination), length * (sizeof(A_UTF16Char)), NULL);
   destination[length] = 0;  // Set NULL-terminator, since CFString calls don't set it
   CFRelease(inputStringCFSR);
-#elif defined AE_OS_WIN
+#elif defined _WIN32
   size_t length = wcslen(inputString);
   wcscpy_s(reinterpret_cast<wchar_t *>(destination), length + 1, inputString);
 #endif

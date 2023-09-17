@@ -9,23 +9,19 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-
 #include "GPU_Skeleton.h"
 #include "MiscUtil.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#ifdef AE_OS_WIN
+#ifdef _WIN32
 #include "Win/resource.h"
 #define ABOUT_IMAGE MAKEINTRESOURCE(IDB_PNG1)
 
 HMODULE GCM() {
   HMODULE hModule = NULL;
-  GetModuleHandleEx(
-    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-    (LPCTSTR)GCM,
-    &hModule);
+  GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)GCM, &hModule);
 
   return hModule;
 }
@@ -33,11 +29,11 @@ HMODULE GCM() {
 #define ABOUT_IMAGE "about_image.png"
 #endif
 
-PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
+PF_Err LoadAboutImage(PF_InData *in_data, CachedImage *cachedImage) {
   AEGP_SuiteHandler suites(in_data->pica_basicP);
-  unsigned char* imageData;
+  unsigned char *   imageData;
 
-#ifdef AE_OS_WIN
+#ifdef _WIN32
   HRSRC hResource = FindResource(GCM(), ABOUT_IMAGE, MAKEINTRESOURCE(PNG));
   if (hResource == nullptr) {
     FX_LOG("Cannot find 'about' resource.");
@@ -45,16 +41,15 @@ PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
   }
 
   const DWORD imageSize = SizeofResource(GCM(), hResource);
-  const void* pResourceData = LockResource(LoadResource(GCM(), hResource));
+  const void *pResourceData = LockResource(LoadResource(GCM(), hResource));
   if (pResourceData == nullptr) {
     FX_LOG("Cannot lock 'about' resource.");
     return PF_Err_BAD_CALLBACK_PARAM;
   }
 
   // Use stb_image.h to decode the image data
-  imageData = stbi_load_from_memory((const stbi_uc*)pResourceData, imageSize,
-    &cachedImage->width, &cachedImage->height,
-    &cachedImage->channels, 4);
+  imageData = stbi_load_from_memory((const stbi_uc *)pResourceData, imageSize, &cachedImage->width, &cachedImage->height,
+                                    &cachedImage->channels, 4);
 
   // If the image data loading fails, handle the error.
   if (imageData == nullptr) {
@@ -66,7 +61,7 @@ PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
   // since Windows support only 4 channels ARGB (32bits)
   // info: https://community.adobe.com/t5/after-effects-discussions/image-logo-in-parameter/m-p/5197581
   cachedImage->pixelLayout = kDRAWBOT_PixelLayout_32BGR;
-  unsigned char* argb_data = (unsigned char*)malloc(cachedImage->width * cachedImage->height * 4); // Allocate memory for ARGB data
+  unsigned char *argb_data = (unsigned char *)malloc(cachedImage->width * cachedImage->height * 4); // Allocate memory for ARGB data
 
   for (int y = 0; y < cachedImage->height; ++y) {
     for (int x = 0; x < cachedImage->width; ++x) {
@@ -93,14 +88,13 @@ PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
   resourcePath += ABOUT_IMAGE;
 
   // Load the image using stb_image.h
-  imageData = stbi_load(resourcePath.c_str(), &cachedImage->width, &cachedImage->height,
-    &cachedImage->channels, 3);
+  imageData = stbi_load(resourcePath.c_str(), &cachedImage->width, &cachedImage->height, &cachedImage->channels, 3);
 
   if (imageData == nullptr) {
     FX_LOG("Cannot load 'about' image at: " << resourcePath);
     return PF_Err_BAD_CALLBACK_PARAM;
   }
-  
+
   cachedImage->channels = 3;
   cachedImage->pixelLayout = kDRAWBOT_PixelLayout_24BGR;
 #endif
@@ -108,14 +102,14 @@ PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
   // The following section remains unchanged from your original code
   const int numBytes = cachedImage->width * cachedImage->height * cachedImage->channels;
   cachedImage->drawbotDataH = suites.HandleSuite1()->host_new_handle(numBytes);
-  unsigned char* drawbotDataP = static_cast<unsigned char*>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
-  
+  unsigned char *drawbotDataP = static_cast<unsigned char *>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
+
   memcpy(drawbotDataP, imageData, numBytes);
-  
+
   // Unlock and release memory
   suites.HandleSuite1()->host_unlock_handle(cachedImage->drawbotDataH);
 
-#ifdef AE_OS_WIN
+#ifdef _WIN32
   free(imageData); // For Windows, after ARGB conversion we use malloc, so we free it.
 #else
   stbi_image_free(imageData); // For non-Windows (Mac, in this case) where the image was loaded with stb_image
@@ -126,33 +120,32 @@ PF_Err LoadAboutImage(PF_InData* in_data, CachedImage* cachedImage) {
 
 static std::unique_ptr<DRAWBOT_UTF16Char[]> convertStringToUTF16Char(const std::string &str) {
   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-  std::wstring wstr = converter.from_bytes(str);
-  size_t length = wcslen(wstr.c_str());
-  std::unique_ptr<DRAWBOT_UTF16Char[]> utf16char(
-      new DRAWBOT_UTF16Char[length + 1]);  // Add +1 for the null character
+  std::wstring                                           wstr = converter.from_bytes(str);
+  size_t                                                 length = wcslen(wstr.c_str());
+  std::unique_ptr<DRAWBOT_UTF16Char[]>                   utf16char(new DRAWBOT_UTF16Char[length + 1]); // Add +1 for the null character
   AEUtil::copyConvertStringLiteralIntoUTF16(wstr.c_str(), utf16char.get());
-  utf16char[length] = 0;  // Add null character at the end of the string
+  utf16char[length] = 0; // Add null character at the end of the string
   return utf16char;
 }
 
-PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                 PF_LayerDef *output, PF_EventExtra *event_extra, PF_Pixel some_color) {
-  PF_Err err = PF_Err_NONE, err2 = PF_Err_NONE;
+PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output, PF_EventExtra *event_extra,
+                 PF_Pixel some_color) {
+  PF_Err            err = PF_Err_NONE, err2 = PF_Err_NONE;
   AEGP_SuiteHandler suites(in_data->pica_basicP);
 
-  DRAWBOT_Suites drawbotSuites;
-  DRAWBOT_DrawRef drawing_ref = NULL;
-  DRAWBOT_SurfaceRef surface_ref = NULL;
+  DRAWBOT_Suites      drawbotSuites;
+  DRAWBOT_DrawRef     drawing_ref = NULL;
+  DRAWBOT_SurfaceRef  surface_ref = NULL;
   DRAWBOT_SupplierRef supplier_ref = NULL;
-  DRAWBOT_ImageRef img_ref = NULL;
-  DRAWBOT_BrushRef brush_ref = NULL;
-  DRAWBOT_BrushRef string_brush_ref = NULL;
-  DRAWBOT_FontRef font_ref = NULL;
-  DRAWBOT_FontRef small_font_ref = NULL;
+  DRAWBOT_ImageRef    img_ref = NULL;
+  DRAWBOT_BrushRef    brush_ref = NULL;
+  DRAWBOT_BrushRef    string_brush_ref = NULL;
+  DRAWBOT_FontRef     font_ref = NULL;
+  DRAWBOT_FontRef     small_font_ref = NULL;
 
   DRAWBOT_ColorRGBA drawbot_color;
-  float fontSize = 0.0f;
-  float smallFontSize = 10.0f;
+  float             fontSize = 0.0f;
+  float             smallFontSize = 10.0f;
 
   // Acquire all the drawbot suites in one go; it should be matched with the release routine.
   // You can also use C++ style AEFX_DrawbotSuitesScoper which doesn't need a release routine.
@@ -160,34 +153,28 @@ PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[]
 
   if (!err) {
     PF_EffectCustomUISuite1 *effectCustomUISuiteP;
-    ERR(AEFX_AcquireSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion1,
-                          NULL, (void **)&effectCustomUISuiteP));
+    ERR(AEFX_AcquireSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion1, NULL, (void **)&effectCustomUISuiteP));
 
     if (!err) {
       ERR(effectCustomUISuiteP->PF_GetDrawingReference(event_extra->contextH, &drawing_ref));
-      AEFX_ReleaseSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion1,
-                        NULL);
+      AEFX_ReleaseSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion1, NULL);
     }
   }
 
-  if (!drawing_ref) {
-    return err;
-  }
+  if (!drawing_ref) { return err; }
 
   if (!err) {
     ERR(drawbotSuites.drawbot_suiteP->GetSupplier(drawing_ref, &supplier_ref));
     ERR(drawbotSuites.drawbot_suiteP->GetSurface(drawing_ref, &surface_ref));
   }
 
-  auto *globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
-  CachedImage *cachedImage = reinterpret_cast<CachedImage *>(globalData->aboutImage);
-  unsigned char* imageDataP = reinterpret_cast<unsigned char*>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
+  auto *         globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
+  CachedImage *  cachedImage = reinterpret_cast<CachedImage *>(globalData->aboutImage);
+  unsigned char *imageDataP = reinterpret_cast<unsigned char *>(suites.HandleSuite1()->host_lock_handle(cachedImage->drawbotDataH));
 
-  ERR(drawbotSuites.supplier_suiteP->NewImageFromBuffer(
-      supplier_ref, cachedImage->width, cachedImage->height,
-      cachedImage->channels * cachedImage->width,
-      cachedImage->pixelLayout,
-      imageDataP, &img_ref));
+  ERR(drawbotSuites.supplier_suiteP->NewImageFromBuffer(supplier_ref, cachedImage->width, cachedImage->height,
+                                                        cachedImage->channels * cachedImage->width, cachedImage->pixelLayout, imageDataP,
+                                                        &img_ref));
 
   suites.HandleSuite1()->host_unlock_handle(cachedImage->drawbotDataH);
   suites.HandleSuite1()->host_unlock_handle(in_data->global_data);
@@ -222,58 +209,41 @@ PF_Err DrawEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[]
   text_origin.x = event_extra->effect_win.current_frame.left + cachedImage->width / 2;
   text_origin.y = event_extra->effect_win.current_frame.top + cachedImage->height - 9;
 
-  ERR(drawbotSuites.surface_suiteP->DrawString(
-      surface_ref, string_brush_ref, font_ref, status.get(), &text_origin,
-      kDRAWBOT_TextAlignment_Center, kDRAWBOT_TextTruncation_None, 0.0f));
+  ERR(drawbotSuites.surface_suiteP->DrawString(surface_ref, string_brush_ref, font_ref, status.get(), &text_origin,
+                                               kDRAWBOT_TextAlignment_Center, kDRAWBOT_TextTruncation_None, 0.0f));
   // Draw string with white color
 
   drawbot_color.red = drawbot_color.green = drawbot_color.blue = 0.5;
   ERR(drawbotSuites.supplier_suiteP->NewBrush(supplier_ref, &drawbot_color, &string_brush_ref));
 
   text_origin.x = event_extra->effect_win.current_frame.left;
-  text_origin.y =
-      event_extra->effect_win.current_frame.top + cachedImage->height + smallFontSize + 2;
+  text_origin.y = event_extra->effect_win.current_frame.top + cachedImage->height + smallFontSize + 2;
 
-  ERR(drawbotSuites.surface_suiteP->DrawString(
-      surface_ref, string_brush_ref, small_font_ref,
-      convertStringToUTF16Char("CPU: " + GET_APPLE_CPU(globalData->deviceInfo->appleCPU)).get(),
-      &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+  ERR(drawbotSuites.surface_suiteP->DrawString(surface_ref, string_brush_ref, small_font_ref,
+                                               convertStringToUTF16Char("CPU: " + GET_APPLE_CPU(globalData->deviceInfo->appleCPU)).get(),
+                                               &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+
+  text_origin.y += smallFontSize + 2;
+
+  ERR(drawbotSuites.surface_suiteP->DrawString(surface_ref, string_brush_ref, small_font_ref,
+                                               convertStringToUTF16Char("Graphics Card: " + GET_GPU(globalData->deviceInfo->GPU)).get(),
+                                               &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
 
   text_origin.y += smallFontSize + 2;
 
   ERR(drawbotSuites.surface_suiteP->DrawString(
       surface_ref, string_brush_ref, small_font_ref,
-      convertStringToUTF16Char("Graphics Card: " + GET_GPU(globalData->deviceInfo->GPU)).get(),
-      &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+      convertStringToUTF16Char("After Effects Version: " + GET_AE_VERSION(globalData->deviceInfo->version)).get(), &text_origin,
+      kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
 
-  text_origin.y += smallFontSize + 2;
+  if (string_brush_ref) { ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(string_brush_ref))); }
 
-  ERR(drawbotSuites.surface_suiteP->DrawString(
-      surface_ref, string_brush_ref, small_font_ref,
-      convertStringToUTF16Char("After Effects Version: " +
-                               GET_AE_VERSION(globalData->deviceInfo->version))
-          .get(),
-      &text_origin, kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
-
-  if (string_brush_ref) {
-    ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(
-        reinterpret_cast<DRAWBOT_ObjectRef>(string_brush_ref)));
-  }
-
-  if (font_ref) {
-    ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(
-        reinterpret_cast<DRAWBOT_ObjectRef>(font_ref)));
-  }
+  if (font_ref) { ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(font_ref))); }
 
   // Release/destroy the brush. Otherwise, it will lead to a memory leak.
-  if (brush_ref) {
-    ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(
-        reinterpret_cast<DRAWBOT_ObjectRef>(brush_ref)));
-  }
+  if (brush_ref) { ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(brush_ref))); }
 
-  if (img_ref) {
-    ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(img_ref)));
-  }
+  if (img_ref) { ERR2(drawbotSuites.supplier_suiteP->ReleaseObject(reinterpret_cast<DRAWBOT_ObjectRef>(img_ref))); }
 
   // Release the earlier acquired drawbot suites
   ERR2(AEFX_ReleaseDrawbotSuites(in_data, out_data));
@@ -297,14 +267,11 @@ static DRAWBOT_MatrixF32 getLayer2FrameXform(PF_InData *in_data, PF_EventExtra *
 
   if ((*extra->contextH)->w_type == PF_Window_COMP) {
     for (A_short i = 0; i < 3; i++) {
-      extra->cbs.layer_to_comp(extra->cbs.refcon, extra->contextH, in_data->current_time,
-                               in_data->time_scale, &pts[i]);
+      extra->cbs.layer_to_comp(extra->cbs.refcon, extra->contextH, in_data->current_time, in_data->time_scale, &pts[i]);
     }
   }
 
-  for (A_short i = 0; i < 3; i++) {
-    extra->cbs.source_to_frame(extra->cbs.refcon, extra->contextH, &pts[i]);
-  }
+  for (A_short i = 0; i < 3; i++) { extra->cbs.source_to_frame(extra->cbs.refcon, extra->contextH, &pts[i]); }
 
   DRAWBOT_MatrixF32 xform;
 
@@ -322,58 +289,51 @@ static DRAWBOT_MatrixF32 getLayer2FrameXform(PF_InData *in_data, PF_EventExtra *
   return xform;
 }
 
-PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[],
-                       PF_LayerDef *output, PF_EventExtra *extra) {
+PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output, PF_EventExtra *extra) {
   PF_Err err = PF_Err_NONE;
 
   AEGP_SuiteHandler suites(in_data->pica_basicP);
 
-  DRAWBOT_Suites drawbotSuites;
-  DRAWBOT_DrawRef drawingRef = NULL;
+  DRAWBOT_Suites     drawbotSuites;
+  DRAWBOT_DrawRef    drawingRef = NULL;
   DRAWBOT_SurfaceRef surfaceRef = NULL;
 
   AEFX_AcquireDrawbotSuites(in_data, out_data, &drawbotSuites);
 
   // Get the drawing reference by passing context to this new api
   PF_EffectCustomUISuite2 *effectCustomUISuiteP;
-  err = AEFX_AcquireSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion2,
-                          NULL, (void **)&effectCustomUISuiteP);
+  err = AEFX_AcquireSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion2, NULL, (void **)&effectCustomUISuiteP);
 
   if (!err && effectCustomUISuiteP) {
     err = (*effectCustomUISuiteP->PF_GetDrawingReference)(extra->contextH, &drawingRef);
-    AEFX_ReleaseSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion2,
-                      NULL);
+    AEFX_ReleaseSuite(in_data, out_data, kPFEffectCustomUISuite, kPFEffectCustomUISuiteVersion2, NULL);
   }
 
-  if (!drawingRef) {
-    return err;
-  }
+  if (!drawingRef) { return err; }
 
   ERR(suites.DrawbotSuiteCurrent()->GetSurface(drawingRef, &surfaceRef));
 
-  auto *globalData =
-      reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
+  auto *globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
 
   bool doRenderErrorLog = !globalData->sceneInfo->errorLog.empty();
 
   if (!err) {
     DRAWBOT_ColorRGBA foregroundColor, shadowColor, redColor, yellowColor;
-    A_LPoint shadowOffset;
-    float strokeWidth, vertexSize;
+    A_LPoint          shadowOffset;
+    float             strokeWidth, vertexSize;
 
     if (in_data->appl_id != 'PrMr') {
       // Currently, EffectCustomUIOverlayThemeSuite is unsupported in Premiere Pro/Elements
-      ERR(suites.EffectCustomUIOverlayThemeSuite1()->PF_GetPreferredForegroundColor(
-          &foregroundColor));
+      ERR(suites.EffectCustomUIOverlayThemeSuite1()->PF_GetPreferredForegroundColor(&foregroundColor));
       ERR(suites.EffectCustomUIOverlayThemeSuite1()->PF_GetPreferredShadowColor(&shadowColor));
       ERR(suites.EffectCustomUIOverlayThemeSuite1()->PF_GetPreferredShadowOffset(&shadowOffset));
       ERR(suites.EffectCustomUIOverlayThemeSuite1()->PF_GetPreferredStrokeWidth(&strokeWidth));
       ERR(suites.EffectCustomUIOverlayThemeSuite1()->PF_GetPreferredVertexSize(&vertexSize));
     } else {
-      foregroundColor = {0.9f, 0.9f, 0.9f, 1.0f};
-      shadowColor = {0.0, 0, 0.0f, 0.2f};
-      redColor = {0.9, 0, 0, 1};
-      yellowColor = {0.9, 0.6, 0, 1};
+      foregroundColor = { 0.9f, 0.9f, 0.9f, 1.0f };
+      shadowColor = { 0.0, 0, 0.0f, 0.2f };
+      redColor = { 0.9, 0, 0, 1 };
+      yellowColor = { 0.9, 0.6, 0, 1 };
       shadowOffset.x = -1;
       shadowOffset.y = +1;
     }
@@ -393,15 +353,14 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
     auto layer2FrameXform = getLayer2FrameXform(in_data, extra);
 
     // Setup Drawbot objects
-    DRAWBOT_PointF32 origin = {padding, padding};
+    DRAWBOT_PointF32    origin = { padding, padding };
     DRAWBOT_SupplierRef supplierRef = NULL;
-    DRAWBOT_BrushRef redBrushRef = NULL, shadowBrushRef = NULL, yellowBrushRef = NULL;
-    DRAWBOT_FontRef fontRef = NULL, largeFontRef = NULL;
-    DRAWBOT_Rect32 clipRect;
+    DRAWBOT_BrushRef    redBrushRef = NULL, shadowBrushRef = NULL, yellowBrushRef = NULL;
+    DRAWBOT_FontRef     fontRef = NULL, largeFontRef = NULL;
+    DRAWBOT_Rect32      clipRect;
 
     // Always set the scale to one regardless viewport zoom
-    double zoom =
-        suites.ANSICallbacksSuite1()->hypot(layer2FrameXform.mat[0][0], layer2FrameXform.mat[0][1]);
+    double zoom = suites.ANSICallbacksSuite1()->hypot(layer2FrameXform.mat[0][0], layer2FrameXform.mat[0][1]);
     layer2FrameXform.mat[0][0] /= zoom;
     layer2FrameXform.mat[0][1] /= zoom;
     layer2FrameXform.mat[1][0] /= zoom;
@@ -418,10 +377,9 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
     ERR(drawbotSuites.supplier_suiteP->NewBrush(supplierRef, &shadowColor, &shadowBrushRef));
     ERR(drawbotSuites.supplier_suiteP->GetDefaultFontSize(supplierRef, &fontSize));
     ERR(drawbotSuites.supplier_suiteP->NewDefaultFont(supplierRef, fontSize, &fontRef));
-    ERR(drawbotSuites.supplier_suiteP->NewDefaultFont(supplierRef, fontSize * largeFontScale,
-                                                      &largeFontRef));
+    ERR(drawbotSuites.supplier_suiteP->NewDefaultFont(supplierRef, fontSize * largeFontScale, &largeFontRef));
 
-    {  // Start Transform
+    { // Start Transform
       auto *surface = suites.SurfaceSuiteCurrent();
 
       // Apply a transform
@@ -435,19 +393,18 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
 #ifdef DEBUG
       origin.y += fontSize * largeFontScale;
 
-      ERR(surface->DrawString(surfaceRef, redBrushRef, largeFontRef,
-                              convertStringToUTF16Char("DEBUG VERSION:").get(), &origin,
+      ERR(surface->DrawString(surfaceRef, redBrushRef, largeFontRef, convertStringToUTF16Char("DEBUG VERSION:").get(), &origin,
                               kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
 
       // Array of values to be displayed
       auto debugValues = {
-          make_pair("Max Result Rect: ", to_string(globalData->debugInfo.max_result_rect)),
-          make_pair("Result Rect: ", to_string(globalData->debugInfo.result_rect)),
-          make_pair("Request Rect: ", to_string(globalData->debugInfo.request_rect)),
-          make_pair("Output Rect: ", to_string(globalData->debugInfo.output_rect)),
-          make_pair("Input World: ", to_string(globalData->debugInfo.in_world)),
-          make_pair("Temp World: ", to_string(globalData->debugInfo.tmp_world)),
-          make_pair("Output World: ", to_string(globalData->debugInfo.out_world)),
+        make_pair("Max Result Rect: ", to_string(globalData->debugInfo.max_result_rect)),
+        make_pair("Result Rect: ", to_string(globalData->debugInfo.result_rect)),
+        make_pair("Request Rect: ", to_string(globalData->debugInfo.request_rect)),
+        make_pair("Output Rect: ", to_string(globalData->debugInfo.output_rect)),
+        make_pair("Input World: ", to_string(globalData->debugInfo.in_world)),
+        make_pair("Temp World: ", to_string(globalData->debugInfo.tmp_world)),
+        make_pair("Output World: ", to_string(globalData->debugInfo.out_world)),
       };
 
       for (const auto &debugValue : debugValues) {
@@ -457,14 +414,14 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
         origin.x += shadowOffset.x;
         origin.y += shadowOffset.y;
 
-        ERR(surface->DrawString(surfaceRef, shadowBrushRef, fontRef, debugString.get(), &origin,
-                                kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+        ERR(surface->DrawString(surfaceRef, shadowBrushRef, fontRef, debugString.get(), &origin, kDRAWBOT_TextAlignment_Left,
+                                kDRAWBOT_TextTruncation_None, 0.0f));
 
         origin.x -= shadowOffset.x;
         origin.y -= shadowOffset.y;
 
-        ERR(surface->DrawString(surfaceRef, yellowBrushRef, fontRef, debugString.get(), &origin,
-                                kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+        ERR(surface->DrawString(surfaceRef, yellowBrushRef, fontRef, debugString.get(), &origin, kDRAWBOT_TextAlignment_Left,
+                                kDRAWBOT_TextTruncation_None, 0.0f));
       }
 #endif
 
@@ -476,14 +433,14 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
         origin.y += shadowOffset.y;
 
         auto status = convertStringToUTF16Char(globalData->sceneInfo->status);
-        ERR(surface->DrawString(surfaceRef, shadowBrushRef, largeFontRef, status.get(), &origin,
-                                kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+        ERR(surface->DrawString(surfaceRef, shadowBrushRef, largeFontRef, status.get(), &origin, kDRAWBOT_TextAlignment_Left,
+                                kDRAWBOT_TextTruncation_None, 0.0f));
 
         origin.x -= shadowOffset.x;
         origin.y -= shadowOffset.y;
 
-        ERR(surface->DrawString(surfaceRef, redBrushRef, largeFontRef, status.get(), &origin,
-                                kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+        ERR(surface->DrawString(surfaceRef, redBrushRef, largeFontRef, status.get(), &origin, kDRAWBOT_TextAlignment_Left,
+                                kDRAWBOT_TextTruncation_None, 0.0f));
 
         origin.y += padding * 2;
 
@@ -496,14 +453,14 @@ PF_Err DrawCompUIEvent(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *pa
           origin.x += shadowOffset.x;
           origin.y += shadowOffset.y;
 
-          ERR(surface->DrawString(surfaceRef, shadowBrushRef, fontRef, lineUTF16Char.get(), &origin,
-                                  kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+          ERR(surface->DrawString(surfaceRef, shadowBrushRef, fontRef, lineUTF16Char.get(), &origin, kDRAWBOT_TextAlignment_Left,
+                                  kDRAWBOT_TextTruncation_None, 0.0f));
 
           origin.x -= shadowOffset.x;
           origin.y -= shadowOffset.y;
 
-          ERR(surface->DrawString(surfaceRef, redBrushRef, fontRef, lineUTF16Char.get(), &origin,
-                                  kDRAWBOT_TextAlignment_Left, kDRAWBOT_TextTruncation_None, 0.0f));
+          ERR(surface->DrawString(surfaceRef, redBrushRef, fontRef, lineUTF16Char.get(), &origin, kDRAWBOT_TextAlignment_Left,
+                                  kDRAWBOT_TextTruncation_None, 0.0f));
         }
       } /* End doRenderErrorLog */
 
