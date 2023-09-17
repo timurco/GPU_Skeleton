@@ -60,18 +60,34 @@
 #include "Debug.h"
 #include "MiscUtil.h"
 
-enum { GPU_SKELETON_INPUT = 0, GPU_SKELETON_ABOUT, GPU_SKELETON_PARAMETER, GPU_SKELETON_NUM_PARAMS };
+enum {
+  GPU_SKELETON_INPUT = 0,
+  GPU_SKELETON_ABOUT,
+  GPU_SKELETON_PARAMETER,
+  GPU_SKELETON_COLOR,
+  GPU_SKELETON_LAYER,
+  GPU_SKELETON_NUM_PARAMS
+};
 
 enum {
-  Parameter_DISK_ID = 1,
+  Parameter_DISK_ID = 2,
+  Color_DISK_ID,
+  Layer_DISK_ID
 };
 
 typedef struct {
+  float color[4];
+} GPUStruct;
+
+typedef struct {
   float mParameter;
+  GPUStruct mInnerStruct;
 } PluginInputParams;
 
 #define PARAMETER_STR "Parameter"
 #define MAX_PARAMETER 256
+#define COLOR_STR "Color"
+#define LAYER_STR "Layer"
 
 extern "C" {
 

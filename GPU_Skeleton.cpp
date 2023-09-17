@@ -136,7 +136,7 @@ static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   PF_ParamDef def;
   AEFX_CLR_STRUCT(def);
 
-  auto *       globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
+  auto        *globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_data->global_data));
   CachedImage *cachedImage = reinterpret_cast<CachedImage *>(globalData->aboutImage);
   suites.HandleSuite1()->host_unlock_handle(in_data->global_data);
 
@@ -164,7 +164,13 @@ static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   }
 
   AEFX_CLR_STRUCT(def);
-  PF_ADD_FIXED(PARAMETER_STR, 0, MAX_PARAMETER, 0, MAX_PARAMETER, 0, 1, PF_ValueDisplayFlag_NONE, 0, GPU_SKELETON_PARAMETER);
+  PF_ADD_FIXED(PARAMETER_STR, 0, MAX_PARAMETER, 0, MAX_PARAMETER, 0, 1, PF_ValueDisplayFlag_NONE, 0, Parameter_DISK_ID);
+
+  AEFX_CLR_STRUCT(def);
+  PF_ADD_COLOR(COLOR_STR, 0.0, 0.0, 0.0, Color_DISK_ID);
+
+  AEFX_CLR_STRUCT(def);
+  PF_ADD_LAYER(LAYER_STR, 0, Layer_DISK_ID);
 
   out_data->num_params = GPU_SKELETON_NUM_PARAMS;
 
@@ -201,10 +207,17 @@ static PF_Err PreRender(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PreRender
     // from PreRender to Render with pre_render_data.
     PF_ParamDef cur_param;
 
-    ERR(PF_CHECKOUT_PARAM(in_dataP, GPU_SKELETON_PARAMETER, in_dataP->current_time, in_dataP->time_step, in_dataP->time_scale, &cur_param));
-
+    ERR(PF_CHECKOUT_PARAM(in_dataP, Parameter_DISK_ID, in_dataP->current_time, in_dataP->time_step, in_dataP->time_scale, &cur_param));
     infoP->mParameter = cur_param.u.fd.value / 65536.0f;
     infoP->mParameter /= 100.0f;
+    ERR(PF_CHECKIN_PARAM(in_dataP, &cur_param));
+
+    ERR(PF_CHECKOUT_PARAM(in_dataP, Color_DISK_ID, in_dataP->current_time, in_dataP->time_step, in_dataP->time_scale, &cur_param));
+    infoP->mInnerStruct.color[0] = cur_param.u.cd.value.red;
+    infoP->mInnerStruct.color[1] = cur_param.u.cd.value.green;
+    infoP->mInnerStruct.color[2] = cur_param.u.cd.value.blue;
+    infoP->mInnerStruct.color[3] = cur_param.u.cd.value.alpha;
+    ERR(PF_CHECKIN_PARAM(in_dataP, &cur_param));
 
     extraP->output->pre_render_data = infoP;
     extraP->output->delete_pre_render_data_func = DisposePreRenderData;
@@ -212,6 +225,9 @@ static PF_Err PreRender(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PreRender
     // END OF PARAMETERS
 
     AEGP_SuiteHandler suites(in_dataP->pica_basicP);
+
+    ERR(extraP->cb->checkout_layer(in_dataP->effect_ref, GPU_SKELETON_LAYER, Layer_DISK_ID, &req, in_dataP->current_time,
+                                   in_dataP->time_step, in_dataP->time_scale, &in_result));
 
     ERR(extraP->cb->checkout_layer(in_dataP->effect_ref, GPU_SKELETON_INPUT, GPU_SKELETON_INPUT, &req, in_dataP->current_time,
                                    in_dataP->time_step, in_dataP->time_scale, &in_result));
@@ -246,7 +262,9 @@ static PF_Err SmartRenderCPU(PF_InData *in_data, PF_OutData *out_data, PF_PixelF
 static PF_Err SmartRender(PF_InData *in_data, PF_OutData *out_data, PF_SmartRenderExtra *extraP, bool isGPU) {
   PF_Err err = PF_Err_NONE, err2 = PF_Err_NONE;
 
-  PF_EffectWorld *input_worldP = NULL, *output_worldP = NULL;
+  PF_EffectWorld  *input_worldP   = NULL,
+                  *output_worldP  = NULL,
+                  *layer_worldP   = NULL;
 
   // Parameters can be queried during render. In this example, we pass them from PreRender as an
   // example of using pre_render_data.
@@ -254,20 +272,25 @@ static PF_Err SmartRender(PF_InData *in_data, PF_OutData *out_data, PF_SmartRend
 
   if (infoP) {
     ERR((extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT, &input_worldP)));
+    ERR((extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_LAYER, &layer_worldP)));
 
     ERR(extraP->cb->checkout_output(in_data->effect_ref, &output_worldP));
 
-    AEFX_SuiteScoper<PF_WorldSuite2> world_suite = AEFX_SuiteScoper<PF_WorldSuite2>(in_data, kPFWorldSuite, kPFWorldSuiteVersion2,
+    AEFX_SuiteScoper<PF_WorldSuite2> world_suite = AEFX_SuiteScoper<PF_WorldSuite2>(in_data,
+                                                                                    kPFWorldSuite,
+                                                                                    kPFWorldSuiteVersion2,
                                                                                     out_data);
+
     PF_PixelFormat                   pixel_format = PF_PixelFormat_INVALID;
     ERR(world_suite->PF_GetPixelFormat(input_worldP, &pixel_format));
 
     if (isGPU) {
-      ERR(SmartRenderGPU(in_data, out_data, pixel_format, input_worldP, output_worldP, extraP, infoP));
+      ERR(SmartRenderGPU(in_data, out_data, pixel_format, input_worldP, output_worldP, layer_worldP, extraP, infoP));
     } else {
       ERR(SmartRenderCPU(in_data, out_data, pixel_format, input_worldP, output_worldP, extraP, infoP));
     }
 
+    ERR2(extraP->cb->checkin_layer_pixels(in_data->effect_ref, GPU_SKELETON_LAYER));
     ERR2(extraP->cb->checkin_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT));
   } else {
     return PF_Err_INTERNAL_STRUCT_DAMAGED;

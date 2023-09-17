@@ -75,7 +75,8 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSe
 
 PF_Err GPUDeviceSetdown(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSetdownExtra *extraP);
 
-PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat pixel_format, PF_EffectWorld *input_worldP,
-                      PF_EffectWorld *output_worldP, PF_SmartRenderExtra *extraP, PluginInputParams *infoP);
+PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat pixel_format,
+                      PF_EffectWorld *input_worldP, PF_EffectWorld *output_worldP, PF_EffectWorld *layer_worldP,
+                      PF_SmartRenderExtra *extraP, PluginInputParams *infoP);
 
 #endif /* GPU_Skeleton_GPU_H */

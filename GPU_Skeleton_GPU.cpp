@@ -49,7 +49,7 @@ as input parameters.
 PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSetupExtra *extraP) {
   PF_Err            err = PF_Err_NONE;
   AEGP_SuiteHandler suites(in_dataP->pica_basicP);
-  auto *            globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
+  auto              *globalData = static_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
 
   PF_GPUDeviceInfo device_info;
   AEFX_CLR_STRUCT(device_info);
@@ -75,7 +75,8 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSe
 
     char const *k16fString = "#define GF_OPENCL_SUPPORTS_16F 0\n";
 
-    size_t       sizes[] = { strlen(k16fString), strlen(kGPU_Skeleton_Kernel_OpenCLString) };
+    const size_t sizes[] = {strlen(k16fString),
+                            strlen(kGPU_Skeleton_Kernel_OpenCLString)};
     char const * strings[] = { k16fString, kGPU_Skeleton_Kernel_OpenCLString };
     cl_context   context = (cl_context)device_info.contextPV;
     cl_device_id device = (cl_device_id)device_info.devicePV;
@@ -87,6 +88,16 @@ PF_Err GPUDeviceSetup(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDeviceSe
     }
 
     CL_ERR(clBuildProgram(program, 1, &device, "-cl-single-precision-constant -cl-fast-relaxed-math", 0, 0));
+
+    size_t logSize;
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
+
+    if (logSize > 1) {
+      char *log = (char *)malloc(logSize);
+      clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, logSize, log, NULL);
+      MessageBox(NULL, log, "OpenCL Error", MB_ICONERROR | MB_OK);
+      free(log);
+    }
 
     if (!err) {
       cl_gpu_data->main_kernel = clCreateKernel(program, "MainKernel", &result);
@@ -188,7 +199,7 @@ PF_Err GPUDeviceSetdown(PF_InData *in_dataP, PF_OutData *out_dataP, PF_GPUDevice
 }
 
 PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat pixel_format, PF_EffectWorld *input_worldP,
-                      PF_EffectWorld *output_worldP, PF_SmartRenderExtra *extraP, PluginInputParams *infoP) {
+                      PF_EffectWorld *output_worldP, PF_EffectWorld *layer_worldP, PF_SmartRenderExtra *extraP, PluginInputParams *infoP) {
   PF_Err err = PF_Err_NONE;
 
   AEFX_SuiteScoper<PF_GPUDeviceSuite1> gpu_suite = AEFX_SuiteScoper<PF_GPUDeviceSuite1>(in_dataP, kPFGPUDeviceSuite,
@@ -206,9 +217,15 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
   void *dst_mem = 0;
   ERR(gpu_suite->GetGPUWorldData(in_dataP->effect_ref, output_worldP, &dst_mem));
 
+  void *lyr_mem = 0;
+  // Only if layer has selected
+  if (layer_worldP != nullptr) {
+    ERR(gpu_suite->GetGPUWorldData(in_dataP->effect_ref, layer_worldP, &lyr_mem));
+  }
+
 #ifdef DEBUG
   AEGP_SuiteHandler suites(in_dataP->pica_basicP);
-  auto *            globalData = reinterpret_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
+  auto              *globalData = static_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
 #endif
 
   // read the parameters
@@ -218,7 +235,7 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
   main_params.mHeight = input_worldP->height;
   main_params.mParameter = infoP->mParameter;
   // Assign time-related variables
-  float fps = in_dataP->time_scale / in_dataP->local_time_step;
+  const float fps = in_dataP->time_scale / in_dataP->local_time_step;
   main_params.mTime = (float)in_dataP->current_time / in_dataP->time_scale;
   FX_LOG_VAL("fps", fps);
   FX_LOG_VAL("main_params.mTime", main_params.mTime);
@@ -228,8 +245,8 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
   FX_LOG_VAL("time_step", in_dataP->time_step);
   FX_LOG_VAL("local_time_step", in_dataP->local_time_step);
 
-  A_long src_row_bytes = input_worldP->rowbytes;
-  A_long dst_row_bytes = output_worldP->rowbytes;
+  const A_long src_row_bytes = input_worldP->rowbytes;
+  const A_long dst_row_bytes = output_worldP->rowbytes;
 
   main_params.mSrcPitch = src_row_bytes / bytes_per_pixel;
   main_params.mDstPitch = dst_row_bytes / bytes_per_pixel;
