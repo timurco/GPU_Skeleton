@@ -99,7 +99,7 @@ struct SceneInfo {
   string errorLog;
 };
 
-enum { APPLE_NONE = 0, APPLE_M1, APPLE_INTEL };
+enum { APPLE_NONE = 0, APPLE_SILICONE, APPLE_INTEL };
 typedef A_long AppleCPU;
 
 struct DeviceInfo {

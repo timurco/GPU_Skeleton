@@ -4,10 +4,15 @@
 #include <iostream>
 #endif
 
+#ifndef _WIN32
+static void OutputDebugString(const char* msg) { std::cout << msg; }
+static void OutputDebugStringA(const char* msg) { std::cout << msg; }
+#endif
+
 #define FX_LOG_HEADER "[GPU_SKELETON]: "
 #define FX_LOG_FOOTER "\n============\n"
-#define FX_LOG(log) cout << FX_LOG_HEADER << log << FX_LOG_FOOTER << endl
-#define FX_LOG_VAL(log, val) cout << FX_LOG_HEADER << log << " = " << val << FX_LOG_FOOTER << endl
+#define FX_LOG(log) do { std::ostringstream oss; oss << FX_LOG_HEADER << log << FX_LOG_FOOTER; OutputDebugStringA(oss.str().c_str()); } while(0)
+#define FX_LOG_VAL(log, val) do { std::ostringstream oss; oss << FX_LOG_HEADER << log << " = " << val << FX_LOG_FOOTER; OutputDebugStringA(oss.str().c_str()); } while(0)
 
 #define FX_LOG_TIME_START(name) auto name = chrono::system_clock::now();
 #define FX_LOG_TIME_END(name, message) \
