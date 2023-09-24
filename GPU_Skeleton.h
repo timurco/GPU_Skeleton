@@ -55,6 +55,7 @@
 
 #include <chrono>
 #include <regex>
+#include <map>
 #include "AEUtil.h"
 #include "Config.h"
 #include "Debug.h"
@@ -63,16 +64,17 @@
 enum {
   GPU_SKELETON_INPUT = 0,
   GPU_SKELETON_ABOUT,
+  GPU_SKELETON_LAYER,
   GPU_SKELETON_PARAMETER,
   GPU_SKELETON_COLOR,
-  GPU_SKELETON_LAYER,
   GPU_SKELETON_NUM_PARAMS
 };
 
 enum {
-  Parameter_DISK_ID = 2,
-  Color_DISK_ID,
-  Layer_DISK_ID
+  GPU_SKELETON_ABOUT_Disk_ID = 1,
+  GPU_SKELETON_LAYER_Disk_ID,
+  GPU_SKELETON_PARAMETER_Disk_ID,
+  GPU_SKELETON_COLOR_Disk_ID,
 };
 
 typedef struct {

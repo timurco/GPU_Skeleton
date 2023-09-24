@@ -1,4 +1,4 @@
-//
+﻿//
 //  GPU_Skeleton_GPU.cpp
 //  GPU_Skeleton
 //
@@ -22,6 +22,82 @@ PF_Err NSError2PFErr(NSError *inError) {
 static size_t RoundUp(size_t inValue, size_t inMultiple) { return inValue ? ((inValue + inMultiple - 1) / inMultiple) * inMultiple : 0; }
 
 static size_t DivideRoundUp(size_t inValue, size_t inMultiple) { return inValue ? (inValue + inMultiple - 1) / inMultiple : 0; }
+
+static std::map<cl_int, std::string> clErrorMap = {
+    {CL_SUCCESS, "Success"},
+    {CL_DEVICE_NOT_FOUND, "Device not found"},
+    {CL_DEVICE_NOT_AVAILABLE, "Device not available"},
+    {CL_COMPILER_NOT_AVAILABLE, "Compiler not available"},
+    {CL_MEM_OBJECT_ALLOCATION_FAILURE, "Memory object allocation failure"},
+    {CL_OUT_OF_RESOURCES, "Out of resources"},
+    {CL_OUT_OF_HOST_MEMORY, "Out of host memory"},
+    {CL_PROFILING_INFO_NOT_AVAILABLE, "Profiling information not available"},
+    {CL_MEM_COPY_OVERLAP, "Memory copy overlap"},
+    {CL_IMAGE_FORMAT_MISMATCH, "Image format mismatch"},
+    {CL_IMAGE_FORMAT_NOT_SUPPORTED, "Image format not supported"},
+    {CL_BUILD_PROGRAM_FAILURE, "Build program failure"},
+    {CL_MAP_FAILURE, "Map failure"},
+    {CL_MISALIGNED_SUB_BUFFER_OFFSET, "Misaligned sub-buffer offset"},
+    {CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST, "Execution status error for events in wait list"},
+    {CL_COMPILE_PROGRAM_FAILURE, "Compile program failure"},
+    {CL_LINKER_NOT_AVAILABLE, "Linker not available"},
+    {CL_LINK_PROGRAM_FAILURE, "Link program failure"},
+    {CL_DEVICE_PARTITION_FAILED, "Device partition failed"},
+    {CL_KERNEL_ARG_INFO_NOT_AVAILABLE, "Kernel argument information not available"},
+
+    {CL_INVALID_VALUE, "Invalid value"},
+    {CL_INVALID_DEVICE_TYPE, "Invalid device type"},
+    {CL_INVALID_PLATFORM, "Invalid platform"},
+    {CL_INVALID_DEVICE, "Invalid device"},
+    {CL_INVALID_CONTEXT, "Invalid context"},
+    {CL_INVALID_QUEUE_PROPERTIES, "Invalid queue properties"},
+    {CL_INVALID_COMMAND_QUEUE, "Invalid command queue"},
+    {CL_INVALID_HOST_PTR, "Invalid host pointer"},
+    {CL_INVALID_MEM_OBJECT, "Invalid memory object"},
+    {CL_INVALID_IMAGE_FORMAT_DESCRIPTOR, "Invalid image format descriptor"},
+    {CL_INVALID_IMAGE_SIZE, "Invalid image size"},
+    {CL_INVALID_SAMPLER, "Invalid sampler"},
+    {CL_INVALID_BINARY, "Invalid binary"},
+    {CL_INVALID_BUILD_OPTIONS, "Invalid build options"},
+    {CL_INVALID_PROGRAM, "Invalid program"},
+    {CL_INVALID_PROGRAM_EXECUTABLE, "Invalid program executable"},
+    {CL_INVALID_KERNEL_NAME, "Invalid kernel name"},
+    {CL_INVALID_KERNEL_DEFINITION, "Invalid kernel definition"},
+    {CL_INVALID_KERNEL, "Invalid kernel"},
+    {CL_INVALID_ARG_INDEX, "Invalid argument index"},
+    {CL_INVALID_ARG_VALUE, "Invalid argument value"},
+    {CL_INVALID_ARG_SIZE, "Invalid argument size"},
+    {CL_INVALID_KERNEL_ARGS, "Invalid kernel arguments"},
+    {CL_INVALID_WORK_DIMENSION, "Invalid work dimension"},
+    {CL_INVALID_WORK_GROUP_SIZE, "Invalid work group size"},
+    {CL_INVALID_WORK_ITEM_SIZE, "Invalid work item size"},
+    {CL_INVALID_GLOBAL_OFFSET, "Invalid global offset"},
+    {CL_INVALID_EVENT_WAIT_LIST, "Invalid event wait list"},
+    {CL_INVALID_EVENT, "Invalid event"},
+    {CL_INVALID_OPERATION, "Invalid operation"},
+    {CL_INVALID_GL_OBJECT, "Invalid OpenGL object"},
+    {CL_INVALID_BUFFER_SIZE, "Invalid buffer size"},
+    {CL_INVALID_MIP_LEVEL, "Invalid mipmap level"},
+    {CL_INVALID_GLOBAL_WORK_SIZE, "Invalid global work size"},
+    {CL_INVALID_PROPERTY, "Invalid property"},
+    {CL_INVALID_IMAGE_DESCRIPTOR, "Invalid image descriptor"},
+    {CL_INVALID_COMPILER_OPTIONS, "Invalid compiler options"},
+    {CL_INVALID_LINKER_OPTIONS, "Invalid linker options"},
+    {CL_INVALID_DEVICE_PARTITION_COUNT, "Invalid device partition count"}};
+
+static std::string clGetErrorString(cl_int error) {
+  std::stringstream ss;
+  ss << "OpenCL error code: 0x" << std::uppercase << std::hex << error;
+  ss << " (";
+  auto it = clErrorMap.find(error);
+  if (it != clErrorMap.end()) {
+    ss << it->second;
+  } else {
+    ss << "Unknown error";
+  }
+  ss << ")";
+  return ss.str();
+}
 
 /**
 
@@ -218,14 +294,12 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
   ERR(gpu_suite->GetGPUWorldData(in_dataP->effect_ref, output_worldP, &dst_mem));
 
   void *lyr_mem = 0;
-  // Only if layer has selected
-  if (layer_worldP != nullptr) {
+  if (layer_worldP != nullptr)  // Only if layer has selected
     ERR(gpu_suite->GetGPUWorldData(in_dataP->effect_ref, layer_worldP, &lyr_mem));
-  }
 
 #ifdef DEBUG
   AEGP_SuiteHandler suites(in_dataP->pica_basicP);
-  auto              *globalData = static_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
+  const auto*       globalData = static_cast<GlobalData *>(suites.HandleSuite1()->host_lock_handle(in_dataP->global_data));
 #endif
 
   // read the parameters
@@ -235,15 +309,15 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
   main_params.mHeight = input_worldP->height;
   main_params.mParameter = infoP->mParameter;
   // Assign time-related variables
-  const float fps = in_dataP->time_scale / in_dataP->local_time_step;
+  //const float fps = in_dataP->time_scale / in_dataP->local_time_step;
   main_params.mTime = (float)in_dataP->current_time / in_dataP->time_scale;
-  FX_LOG_VAL("fps", fps);
-  FX_LOG_VAL("main_params.mTime", main_params.mTime);
-  FX_LOG_VAL("current_time", in_dataP->current_time);
-  FX_LOG_VAL("total_time", in_dataP->total_time);
-  FX_LOG_VAL("time_scale", in_dataP->time_scale);
-  FX_LOG_VAL("time_step", in_dataP->time_step);
-  FX_LOG_VAL("local_time_step", in_dataP->local_time_step);
+  //FX_LOG_VAL("fps", fps);
+  //FX_LOG_VAL("main_params.mTime", main_params.mTime);
+  //FX_LOG_VAL("current_time", in_dataP->current_time);
+  //FX_LOG_VAL("total_time", in_dataP->total_time);
+  //FX_LOG_VAL("time_scale", in_dataP->time_scale);
+  //FX_LOG_VAL("time_step", in_dataP->time_step);
+  //FX_LOG_VAL("local_time_step", in_dataP->local_time_step);
 
   const A_long src_row_bytes = input_worldP->rowbytes;
   const A_long dst_row_bytes = output_worldP->rowbytes;
@@ -254,15 +328,41 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
 
   if (!err && extraP->input->what_gpu == PF_GPU_Framework_OPENCL) {
     PF_Handle      gpu_dataH = (PF_Handle)extraP->input->gpu_data;
-    OpenCLGPUData *cl_gpu_dataP = reinterpret_cast<OpenCLGPUData *>(*gpu_dataH);
+    OpenCLGPUData *cl_gpu_dataP = reinterpret_cast<OpenCLGPUData*>(*gpu_dataH);
+    cl_context     context = (cl_context)device_info.contextPV;
 
     cl_mem cl_src_mem = (cl_mem)src_mem;
     cl_mem cl_dst_mem = (cl_mem)dst_mem;
+
+    cl_image_format format;
+    format.image_channel_order = CL_RGBA;
+    format.image_channel_data_type = CL_FLOAT;
+
+    cl_image_desc desc;
+    cl_mem_flags flag = CL_MEM_READ_ONLY;
+    memset(&desc, 0, sizeof(cl_image_desc));
+    desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+    if (layer_worldP != nullptr) {
+      desc.image_width = layer_worldP->width;
+      desc.image_height = layer_worldP->height;
+      desc.image_row_pitch = layer_worldP->rowbytes;
+      desc.buffer = (cl_mem)lyr_mem;
+    } else {
+      desc.image_width = desc.image_height = 1;
+      flag |= CL_MEM_USE_HOST_PTR;
+    }
+    float dummy[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // Emptiness
+    cl_mem img_mem = clCreateImage(context, flag, &format, &desc,
+                                   layer_worldP == nullptr ? dummy : nullptr, &err);
+
+    if (err != CL_SUCCESS) FX_LOG_ERR(clGetErrorString(err));
+    CL_ERR(err);
 
     cl_uint main_param_index = 0;
 
     // Set the arguments
     CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(cl_mem), &cl_src_mem));
+    CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(cl_mem), &img_mem));
     CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(cl_mem), &cl_dst_mem));
     CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(int), &main_params.mSrcPitch));
     CL_ERR(clSetKernelArg(cl_gpu_dataP->main_kernel, main_param_index++, sizeof(int), &main_params.mDstPitch));
@@ -276,8 +376,10 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
     size_t threadBlock[2] = { 16, 16 };
     size_t grid[2] = { RoundUp(main_params.mWidth, threadBlock[0]), RoundUp(main_params.mHeight, threadBlock[1]) };
 
-    CL_ERR(
-        clEnqueueNDRangeKernel((cl_command_queue)device_info.command_queuePV, cl_gpu_dataP->main_kernel, 2, 0, grid, threadBlock, 0, 0, 0));
+    CL_ERR(clEnqueueNDRangeKernel((cl_command_queue)device_info.command_queuePV,
+                                  cl_gpu_dataP->main_kernel, 2, 0, grid, threadBlock, 0, 0, 0));
+
+    clReleaseMemObject(img_mem);
   }
 #if HAS_CUDA
   else if (!err && extraP->input->what_gpu == PF_GPU_Framework_CUDA) {

@@ -9,6 +9,7 @@
 #include <iostream>
 #include "GPU_Skeleton.h"
 #include "GPU_Skeleton_GPU.h"
+#include <cassert>
 
 static PF_Err About(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef *params[], PF_LayerDef *output) {
   PF_SPRINTF(out_data->return_msg, "%s, v%d.%d\r%s", CONFIG_NAME, MAJOR_VERSION, MINOR_VERSION, CONFIG_DESCRIPTION);
@@ -52,12 +53,12 @@ static PF_Err GlobalSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   FX_LOG_VAL("STAGE VERSION", STAGE_VERSION);
   FX_LOG_VAL("FS_VERSION", out_data->my_version);
 
-  out_data->out_flags = PF_OutFlag_CUSTOM_UI | //  ABOUT
-      PF_OutFlag_PIX_INDEPENDENT | PF_OutFlag_DEEP_COLOR_AWARE | PF_OutFlag_NON_PARAM_VARY | PF_OutFlag_SEND_UPDATE_PARAMS_UI
-      | PF_OutFlag_I_DO_DIALOG;
+  out_data->out_flags = PF_OutFlag_CUSTOM_UI |  //  ABOUT
+                        PF_OutFlag_PIX_INDEPENDENT | PF_OutFlag_DEEP_COLOR_AWARE | PF_OutFlag_NON_PARAM_VARY |
+                        PF_OutFlag_SEND_UPDATE_PARAMS_UI | PF_OutFlag_I_DO_DIALOG;
 
-  out_data->out_flags2 = PF_OutFlag2_FLOAT_COLOR_AWARE | PF_OutFlag2_SUPPORTS_SMART_RENDER | PF_OutFlag2_CUSTOM_UI_ASYNC_MANAGER
-      | PF_OutFlag2_SUPPORTS_THREADED_RENDERING;
+  out_data->out_flags2 = PF_OutFlag2_FLOAT_COLOR_AWARE | PF_OutFlag2_SUPPORTS_SMART_RENDER |
+                         PF_OutFlag2_CUSTOM_UI_ASYNC_MANAGER | PF_OutFlag2_SUPPORTS_THREADED_RENDERING;
 
   // Allocate a memory block of size sizeof(GlobalData) using the host_new_handle() function from
   // the HandleSuite1 structure, which returns a memory descriptor for the created block, and store
@@ -144,7 +145,16 @@ static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
   def.ui_width = cachedImage->width;
   def.ui_height = cachedImage->height + 45.0f;
 
-  PF_ADD_NULL("About", GPU_SKELETON_ABOUT); // "UI");
+  PF_ADD_NULL("About", GPU_SKELETON_ABOUT_Disk_ID); // "UI");
+
+  AEFX_CLR_STRUCT(def);
+  PF_ADD_LAYER(LAYER_STR, PF_LayerDefault_NONE, GPU_SKELETON_LAYER_Disk_ID);
+
+  AEFX_CLR_STRUCT(def);
+  PF_ADD_FIXED(PARAMETER_STR, 0, MAX_PARAMETER, 0, MAX_PARAMETER, 0, 1, PF_ValueDisplayFlag_NONE, 0, GPU_SKELETON_PARAMETER_Disk_ID);
+
+  AEFX_CLR_STRUCT(def);
+  PF_ADD_COLOR(COLOR_STR, 0.0, 0.0, 0.0, GPU_SKELETON_COLOR_Disk_ID);
 
   if (!err) {
     // Referencing Examples/UI/CCU
@@ -162,15 +172,6 @@ static PF_Err ParamsSetup(PF_InData *in_data, PF_OutData *out_data, PF_ParamDef 
 
     err = (*(in_data->inter.register_ui))(in_data->effect_ref, &ci);
   }
-
-  AEFX_CLR_STRUCT(def);
-  PF_ADD_FIXED(PARAMETER_STR, 0, MAX_PARAMETER, 0, MAX_PARAMETER, 0, 1, PF_ValueDisplayFlag_NONE, 0, Parameter_DISK_ID);
-
-  AEFX_CLR_STRUCT(def);
-  PF_ADD_COLOR(COLOR_STR, 0.0, 0.0, 0.0, Color_DISK_ID);
-
-  AEFX_CLR_STRUCT(def);
-  PF_ADD_LAYER(LAYER_STR, 0, Layer_DISK_ID);
 
   out_data->num_params = GPU_SKELETON_NUM_PARAMS;
 
@@ -192,55 +193,66 @@ static void DisposePreRenderData(void *pre_render_dataPV) {
   }
 }
 
-static PF_Err PreRender(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PreRenderExtra *extraP) {
-  PF_Err err = PF_Err_NONE;
+static PF_Err PreRender(PF_InData *in_data, PF_OutData *out_data, PF_PreRenderExtra *extraP) {
+  PF_Err           err = PF_Err_NONE;
 
-  //    AEGP_SuiteHandler suites(in_dataP->pica_basicP);
-  PF_CheckoutResult in_result;
-  PF_RenderRequest  req = extraP->input->output_request;
+  PF_RenderRequest req = extraP->input->output_request;
+  PF_RenderRequest reqEnv = extraP->input->output_request;
+  reqEnv.rect.left = 0;
+  reqEnv.rect.top = 0;
+  reqEnv.rect.right = 10000;
+  reqEnv.rect.bottom = 10000;
+  req.preserve_rgb_of_zero_alpha = true;
+
+  extraP->output->flags |= PF_RenderOutputFlag_GPU_RENDER_POSSIBLE;
+
+  AEGP_SuiteHandler suites(in_data->pica_basicP);
+
+  PF_CheckoutResult in_result, env_result;
+  AEFX_CLR_STRUCT(in_result);
+  AEFX_CLR_STRUCT(env_result);
+
+  ERR(extraP->cb->checkout_layer(in_data->effect_ref, GPU_SKELETON_INPUT, GPU_SKELETON_INPUT, &req,
+                                 in_data->current_time, in_data->time_step, in_data->time_scale, &in_result));
+
+  if (!err) {
+    UnionLRect(&in_result.result_rect, &extraP->output->result_rect);
+    UnionLRect(&in_result.max_result_rect, &extraP->output->max_result_rect);
+
+    ERR(extraP->cb->checkout_layer(in_data->effect_ref, GPU_SKELETON_LAYER, GPU_SKELETON_LAYER, &reqEnv,
+                                   in_data->current_time, in_data->time_step, in_data->time_scale, &env_result));
+  }
+
   extraP->output->flags |= PF_RenderOutputFlag_GPU_RENDER_POSSIBLE;
 
   PluginInputParams *infoP = reinterpret_cast<PluginInputParams *>(malloc(sizeof(PluginInputParams)));
-
-  if (infoP) {
+  if (!err && infoP) {
     // Querying parameters to demoonstrate they are available at PreRender, and data can be passed
     // from PreRender to Render with pre_render_data.
     PF_ParamDef cur_param;
 
-    ERR(PF_CHECKOUT_PARAM(in_dataP, Parameter_DISK_ID, in_dataP->current_time, in_dataP->time_step, in_dataP->time_scale, &cur_param));
+    ERR(PF_CHECKOUT_PARAM(in_data, GPU_SKELETON_PARAMETER, in_data->current_time, in_data->time_step, in_data->time_scale, &cur_param));
     infoP->mParameter = cur_param.u.fd.value / 65536.0f;
     infoP->mParameter /= 100.0f;
-    ERR(PF_CHECKIN_PARAM(in_dataP, &cur_param));
+    ERR(PF_CHECKIN_PARAM(in_data, &cur_param));
 
-    ERR(PF_CHECKOUT_PARAM(in_dataP, Color_DISK_ID, in_dataP->current_time, in_dataP->time_step, in_dataP->time_scale, &cur_param));
+    ERR(PF_CHECKOUT_PARAM(in_data, GPU_SKELETON_COLOR, in_data->current_time, in_data->time_step, in_data->time_scale, &cur_param));
     infoP->mInnerStruct.color[0] = cur_param.u.cd.value.red;
     infoP->mInnerStruct.color[1] = cur_param.u.cd.value.green;
     infoP->mInnerStruct.color[2] = cur_param.u.cd.value.blue;
     infoP->mInnerStruct.color[3] = cur_param.u.cd.value.alpha;
-    ERR(PF_CHECKIN_PARAM(in_dataP, &cur_param));
+    ERR(PF_CHECKIN_PARAM(in_data, &cur_param));
 
     extraP->output->pre_render_data = infoP;
     extraP->output->delete_pre_render_data_func = DisposePreRenderData;
 
     // END OF PARAMETERS
-
-    AEGP_SuiteHandler suites(in_dataP->pica_basicP);
-
-    ERR(extraP->cb->checkout_layer(in_dataP->effect_ref, GPU_SKELETON_LAYER, Layer_DISK_ID, &req, in_dataP->current_time,
-                                   in_dataP->time_step, in_dataP->time_scale, &in_result));
-
-    ERR(extraP->cb->checkout_layer(in_dataP->effect_ref, GPU_SKELETON_INPUT, GPU_SKELETON_INPUT, &req, in_dataP->current_time,
-                                   in_dataP->time_step, in_dataP->time_scale, &in_result));
-
-    if (!err) {
-      UnionLRect(&in_result.result_rect, &extraP->output->result_rect);
-      UnionLRect(&in_result.max_result_rect, &extraP->output->max_result_rect);
-    }
-
-    suites.HandleSuite1()->host_unlock_handle(in_dataP->global_data);
+    suites.HandleSuite1()->host_unlock_handle(in_data->global_data);
   } else {
     err = PF_Err_OUT_OF_MEMORY;
   }
+  
+  
 
   return err;
 }
@@ -262,38 +274,29 @@ static PF_Err SmartRenderCPU(PF_InData *in_data, PF_OutData *out_data, PF_PixelF
 static PF_Err SmartRender(PF_InData *in_data, PF_OutData *out_data, PF_SmartRenderExtra *extraP, bool isGPU) {
   PF_Err err = PF_Err_NONE, err2 = PF_Err_NONE;
 
-  PF_EffectWorld  *input_worldP   = NULL,
-                  *output_worldP  = NULL,
-                  *layer_worldP   = NULL;
-
-  // Parameters can be queried during render. In this example, we pass them from PreRender as an
-  // example of using pre_render_data.
-  PluginInputParams *infoP = reinterpret_cast<PluginInputParams *>(extraP->input->pre_render_data);
+  PF_EffectWorld *input_worldP = NULL, *output_worldP = NULL, *env_worldP = NULL;
+  // Parameters can be queried during render. In this example, we pass them from PreRender as an example of using
+  // pre_render_data.
+  PluginInputParams* infoP = reinterpret_cast<PluginInputParams*>(extraP->input->pre_render_data);
 
   if (infoP) {
-    ERR((extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT, &input_worldP)));
-    ERR((extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_LAYER, &layer_worldP)));
-
+    //    FX_LOG_TIME_START(smRender);
+    ERR(extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT, &input_worldP));
+    ERR(extraP->cb->checkout_layer_pixels(in_data->effect_ref, GPU_SKELETON_LAYER, &env_worldP));
     ERR(extraP->cb->checkout_output(in_data->effect_ref, &output_worldP));
 
-    AEFX_SuiteScoper<PF_WorldSuite2> world_suite = AEFX_SuiteScoper<PF_WorldSuite2>(in_data,
-                                                                                    kPFWorldSuite,
-                                                                                    kPFWorldSuiteVersion2,
-                                                                                    out_data);
-
-    PF_PixelFormat                   pixel_format = PF_PixelFormat_INVALID;
+    AEFX_SuiteScoper<PF_WorldSuite2> world_suite =
+        AEFX_SuiteScoper<PF_WorldSuite2>(in_data, kPFWorldSuite, kPFWorldSuiteVersion2, out_data);
+    PF_PixelFormat pixel_format = PF_PixelFormat_INVALID;
     ERR(world_suite->PF_GetPixelFormat(input_worldP, &pixel_format));
 
-    if (isGPU) {
-      ERR(SmartRenderGPU(in_data, out_data, pixel_format, input_worldP, output_worldP, layer_worldP, extraP, infoP));
-    } else {
-      ERR(SmartRenderCPU(in_data, out_data, pixel_format, input_worldP, output_worldP, extraP, infoP));
-    }
+    ERR(SmartRenderGPU(in_data, out_data, pixel_format, input_worldP, output_worldP, env_worldP, extraP, infoP));
 
-    ERR2(extraP->cb->checkin_layer_pixels(in_data->effect_ref, GPU_SKELETON_LAYER));
     ERR2(extraP->cb->checkin_layer_pixels(in_data->effect_ref, GPU_SKELETON_INPUT));
+    ERR2(extraP->cb->checkin_layer_pixels(in_data->effect_ref, GPU_SKELETON_LAYER));
+    //    FX_LOG_TIME_END(smRender, "Smart Render Duration");
   } else {
-    return PF_Err_INTERNAL_STRUCT_DAMAGED;
+    err = PF_Err_INTERNAL_STRUCT_DAMAGED;
   }
   return err;
 }

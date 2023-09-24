@@ -4,9 +4,18 @@
 #include "PrGPU/KernelSupport/KernelCore.h" //includes KernelWrapper.h
 #include "PrGPU/KernelSupport/KernelMemory.h"
 
+GF_TEXTURE_GLOBAL(float4, inLayerTexture, GF_DOMAIN_UNIT, GF_RANGE_NATURAL_CUDA, GF_EDGE_BORDER, GF_FILTER_LINEAR)
+
 #if GF_DEVICE_TARGET_DEVICE
-GF_KERNEL_FUNCTION(MainKernel, ((const GF_PTR(float4))(inSrc))((GF_PTR(float4))(outDst)),
-                   ((int)(inSrcPitch))((int)(inDstPitch))((int)(in16f))((unsigned int)(inWidth))((unsigned int)(inHeight))
+GF_KERNEL_FUNCTION(MainKernel,
+                   ((const GF_PTR(float4))(inSrc))
+                   ((GF_TEXTURE_TYPE(float))(GF_TEXTURE_NAME(inLayerTexture)))
+                   ((GF_PTR(float4))(outDst)),
+                   ((int)(inSrcPitch))
+                   ((int)(inDstPitch))
+                   ((int)(in16f))
+                   ((unsigned int)(inWidth))
+                   ((unsigned int)(inHeight))
                    // Variables
                    ((float)(inParameter))((float)(inTime)),
                    // Position
@@ -35,6 +44,8 @@ GF_KERNEL_FUNCTION(MainKernel, ((const GF_PTR(float4))(inSrc))((GF_PTR(float4))(
     fragColor.z = uv.x;
     fragColor.y = uv.y;
 
+    fragColor = GF_READTEXTURE(inLayerTexture, uv.x, uv.y);
+
     WriteFloat4(fragColor, outDst, inXY.y * inDstPitch + inXY.x, !!in16f);
   }
 }
@@ -47,7 +58,11 @@ void Main_CUDA(float const *src, float *dst, unsigned int srcPitch, unsigned int
   dim3 blockDim(16, 16, 1);
   dim3 gridDim((width + blockDim.x - 1) / blockDim.x, (height + blockDim.y - 1) / blockDim.y, 1);
 
-  MainKernel<<<gridDim, blockDim, 0>>>((float4 const *)src, (float4 *)dst, srcPitch, dstPitch, is16f, width, height, parameter, time);
+  MainKernel<<<gridDim, blockDim, 0>>>(
+    (float4 const *)src, GF_GET_TEXTURE(inLayerTexture), (float4 *)dst,
+    srcPitch, dstPitch, is16f,
+    width, height,
+    parameter, time);
 
   cudaDeviceSynchronize();
 }
