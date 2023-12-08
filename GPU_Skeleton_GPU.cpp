@@ -383,10 +383,32 @@ PF_Err SmartRenderGPU(PF_InData *in_dataP, PF_OutData *out_dataP, PF_PixelFormat
   }
 #if HAS_CUDA
   else if (!err && extraP->input->what_gpu == PF_GPU_Framework_CUDA) {
-    Main_CUDA((const float *)src_mem, (float *)dst_mem, main_params.mSrcPitch, main_params.mDstPitch, main_params.m16f, main_params.mWidth,
+    cudaArray* d_texArray = 0;
+    cudaChannelFormatDesc channelDesc;
+
+    channelDesc = cudaCreateChannelDesc<float4>();
+    //======================================================================
+    if (layer_worldP != nullptr) {
+      CUDA_CHECK(cudaMallocArray(&d_texArray, &channelDesc, layer_worldP->width, layer_worldP->height));
+      CUDA_CHECK(cudaMemcpyToArray(d_texArray, 0, 0, lyr_mem,
+                                   layer_worldP->width * layer_worldP->height * sizeof(float4),
+                                   cudaMemcpyHostToDevice));
+    }
+    
+
+    Main_CUDA((const float *)src_mem, (float *)dst_mem,
+              d_texArray, channelDesc,
+              main_params.mSrcPitch, main_params.mDstPitch, main_params.m16f, main_params.mWidth,
               main_params.mHeight, main_params.mParameter, main_params.mTime);
 
-    if (cudaPeekAtLastError() != cudaSuccess) { err = PF_Err_INTERNAL_STRUCT_DAMAGED; }
+    CUDA_CHECK(cudaFreeArray(d_texArray));
+
+    if (cudaPeekAtLastError() != cudaSuccess) {
+      auto cudaErrorMsg = cudaGetErrorString(cudaGetLastError());
+      (*in_dataP->utils->ansi.sprintf)(out_dataP->return_msg, "GPU Assert:\r\n%s\n", cudaErrorMsg);
+      out_dataP->out_flags |= PF_OutFlag_DISPLAY_ERROR_MESSAGE;
+      err = PF_Err_INTERNAL_STRUCT_DAMAGED;
+    }
   }
 #endif
 #if HAS_METAL

@@ -47,7 +47,25 @@ inline PF_Err CL2Err(cl_int cl_result) {
 
 #define CL_ERR(FUNC) ERR(CL2Err(FUNC))
 
-extern void Main_CUDA(float const *src, float *dst, unsigned int srcPitch, unsigned int dstPitch, int is16f, unsigned int width,
+#define CUDA_CHECK(FUNC)                                                                                          \
+  do {                                                                                                            \
+    if (!err) {                                                                                                   \
+      cudaError_t cerr = (FUNC);                                                                                  \
+      if (cerr != cudaSuccess) {                                                                                  \
+        (*in_dataP->utils->ansi.sprintf)(out_dataP->return_msg, "GPU Assert:\r\n%s\n", cudaGetErrorString(cerr)); \
+        out_dataP->out_flags |= PF_OutFlag_DISPLAY_ERROR_MESSAGE;                                                 \
+        err = PF_Err_INTERNAL_STRUCT_DAMAGED;                                                                     \
+      }                                                                                                           \
+    }                                                                                                             \
+  } while (0)
+
+extern void Main_CUDA(float const* src,
+                      float* dst,
+                      cudaArray* d_envArray, cudaChannelFormatDesc channelDesc,
+                      unsigned int srcPitch,
+                      unsigned int dstPitch,
+                      int is16f,
+                      unsigned int width,
                       unsigned int height, float parameter, float time);
 
 // GPU data initialized at GPU setup and used during render.

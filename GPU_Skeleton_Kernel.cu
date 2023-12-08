@@ -53,16 +53,30 @@ GF_KERNEL_FUNCTION(MainKernel,
 
 #if __NVCC__
 
-void Main_CUDA(float const *src, float *dst, unsigned int srcPitch, unsigned int dstPitch, int is16f, unsigned int width,
+void Main_CUDA(float const *src, float *dst,
+               cudaArray *d_envArray, cudaChannelFormatDesc channelDesc,
+               unsigned int srcPitch, unsigned int dstPitch, int is16f, unsigned int width,
                unsigned int height, float parameter, float time) {
   dim3 blockDim(16, 16, 1);
   dim3 gridDim((width + blockDim.x - 1) / blockDim.x, (height + blockDim.y - 1) / blockDim.y, 1);
+
+  if (d_envArray != nullptr) {
+    inLayerTexture.addressMode[0] = cudaAddressModeClamp;
+    inLayerTexture.addressMode[1] = cudaAddressModeClamp;
+    inLayerTexture.filterMode = cudaFilterModeLinear;
+    inLayerTexture.normalized = true;
+    cudaBindTextureToArray(inLayerTexture, d_envArray, channelDesc);
+  }
 
   MainKernel<<<gridDim, blockDim, 0>>>(
     (float4 const *)src, GF_GET_TEXTURE(inLayerTexture), (float4 *)dst,
     srcPitch, dstPitch, is16f,
     width, height,
     parameter, time);
+
+  if (d_envArray != nullptr) {
+    cudaUnbindTexture(inLayerTexture);
+  }
 
   cudaDeviceSynchronize();
 }
